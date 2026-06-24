@@ -1,0 +1,122 @@
+services:
+  # ============================================================================
+  # 🗄️ POSTGRESQL DATABASE ENGINE SERVICE TIER
+  # ============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: smvs_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5433:5432"  # Exposed externally on 5433 to avoid local machine conflicts
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================================================
+  # ⚡ DJANGO APPLICATION CONTAINER LAYER (SMVS APPROVAL SYSTEM)
+  # ============================================================================
+  django_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smvs_django_app
+    env_file:
+      - .env
+    command: >
+        sh -c "python manage.py migrate &&
+               python manage.py collectstatic --noinput &&
+               python manage.py init_admin &&
+               if [ \"$$DEBUG\" = \"True\" ]; then
+                   python manage.py runserver 0.0.0.0:9000;
+               else
+                   if command -v gunicorn >/dev/null 2>&1; then
+                       gunicorn smvs_approval_config.wsgi:application --bind 0.0.0.0:9000;
+                   else
+                       echo '⚠️ Gunicorn not found! Falling back to runserver on port 9000...';
+                       python manage.py runserver 0.0.0.0:9000;
+                   fi
+               fi"  
+    ports:
+      - "9000:9000"
+    environment:
+      # Core Staging Flags
+      - DEBUG=${DEBUG}
+      - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_PANEL_PASSWORD=${ADMIN_PANEL_PASSWORD}
+      - SITE_URL=${SITE_URL}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
+      
+      # Database Connection Parameters
+      - DB_ENGINE=${DB_ENGINE}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      
+      # Backup Directory Target Configuration
+      - BACKUP_DIRECTORY=${BACKUP_DIRECTORY}
+      
+      # Communications & Notification Infrastructure
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_USE_SSL=${EMAIL_USE_SSL}
+      - EMAIL_USE_TLS=${EMAIL_USE_TLS}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
+      
+      # TextGuru Gateways
+      - TEXTGURU_LOGINID=${TEXTGURU_LOGINID}
+      - TEXTGURU_PASSWORD=${TEXTGURU_PASSWORD}
+      - TEXTGURU_SENDERID=${TEXTGURU_SENDERID}
+      - ENABLE_SMS_NOTIFICATIONS=${ENABLE_SMS_NOTIFICATIONS}
+      - ENABLE_WHATSAPP_NOTIFICATIONS=${ENABLE_WHATSAPP_NOTIFICATIONS}
+
+      # Whatsapp Gateways
+      - WHATSAPP_API_KEY=${WHATSAPP_API_KEY}
+      - WHATSAPP_FROM_NUMBER=${WHATSAPP_FROM_NUMBER}
+      - WHATSAPP_BASE_URL=${WHATSAPP_BASE_URL}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - ./media:/app/media
+      # 🟢 DYNAMIC BACKUP BIND VOLUME MAPPING
+      - smvs_backups:/backups
+    user: "0:0"
+    restart: unless-stopped
+
+    # ============================================================================
+    # 🩺 PURE PYTHON HTTP HEALTH CHECK (No curl dependency!)
+    # ============================================================================
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/healthz/', timeout=5)"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 120s  # 🟢 Increased to give Django migrations plenty of time to finish
+
+# ==============================================================================
+# 📦 UNIFIED VOLUME STORAGE DEFINITIONS
+# ==============================================================================
+volumes:
+  postgres_data:
+  smvs_backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      # 🟢 FIXED DYNAMIC LOOKUP: Reads your environment file location at container startup!
+      device: ${HOST_BACKUP_LOCATION}

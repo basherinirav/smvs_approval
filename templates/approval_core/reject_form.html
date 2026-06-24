@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% load humanize %}
+
+{% block title %}Reject Form - SMVS Approval System{% endblock %}
+
+{% block content %}
+<div class="mt-4">
+    <div class="form-header">
+        <h2 class="form-number">{{ form.form_number }}</h2>
+        <p>Review and Reject</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="mb-4">{{ form.subject }}</h5>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <strong>Amount:</strong>
+                            {% if form.currency_code != 'INR' %}
+                                <p style="font-size: 1.3rem; color: var(--secondary-color);">
+                                    {{ form.currency_symbol }}{{ form.amount|floatformat:2|intcomma }}
+                                    <small class="text-muted d-block" style="font-size:0.85rem;">
+                                        ≈ ₹{{ form.amount_inr|floatformat:2|intcomma }}
+                                    </small>
+                                </p>
+                            {% else %}
+                                <p style="font-size: 1.3rem; color: var(--secondary-color);">₹{{ form.amount|floatformat:2|intcomma }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Department:</strong>
+                            <p>{{ form.department.name }}</p>
+                        </div>
+                    </div>
+
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="remarks" class="form-label">Reason for Rejection <span class="text-danger">*</span></label>
+                            <textarea name="remarks" id="remarks" class="form-control" rows="5" placeholder="Provide clear reasons for rejection..." required></textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input type="checkbox" name="allow_revision" id="allow_revision" class="form-check-input" checked>
+                                <label for="allow_revision" class="form-check-label">
+                                    Allow user to revise and resubmit the application
+                                </label>
+                            </div>
+                            <small class="form-text text-muted d-block mt-2">
+                                If unchecked, the application will be permanently rejected.
+                            </small>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> 
+                            This action cannot be undone. The applicant will be notified of the rejection.
+                        </div>
+
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            <i class="fas fa-times"></i> Reject Form
+                        </button>
+                        <a href="{% url 'form_detail' form.id %}" class="btn btn-secondary btn-lg">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header" style="background-color: var(--primary-color); color: white;">
+                    <strong>Form Summary</strong>
+                </div>
+                <div class="card-body">
+                    <p><strong>Submitted By:</strong></p>
+                    <p>{{ form.submitted_by.get_full_name }}</p>
+                    <p class="text-muted small">{{ form.submitted_by.email }}</p>
+                    
+                    <hr>
+
+                    <p><strong>Submitted Date:</strong></p>
+                    <p class="text-muted">{{ form.submitted_at|date:"d-m-Y H:i" }}</p>
+
+                    <hr>
+
+                    <p><strong>Documents:</strong></p>
+                    <p>{{ form.documents.count }} file(s) uploaded</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

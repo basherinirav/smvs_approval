@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Approval Form - SMVS Approval System{% endblock %}
+
+{% block content %}
+<div class="mt-4">
+    <div class="form-header">
+        <h2 class="form-number">
+            <i class="fas fa-file-alt"></i> Create Approval Request
+        </h2>
+        <p>Fill out the form below to submit a new approval request</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm" style="border-radius: 8px;">
+                <div class="card-body">
+
+                    <form method="post" enctype="multipart/form-data" id="creationFormObj">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        {# 🟢 UPDATED: Only show toggle if user is in a pure Department Workspace, otherwise auto-lock to Center #}
+                        {% if not request.session.active_workspace_center_id %}
+                        <div class="mb-4 card p-4 bg-light border-0 shadow-sm" style="border-radius: 12px;">
+                            <label class="form-label fw-bold mb-2" style="color: var(--primary-color); font-size: 1.1rem;">
+                                <i class="fas fa-route me-2"></i> Expense Allocation Track <span class="text-danger">*</span>
+                            </label>
+                            <p class="text-muted small mt-0 mb-3"><i class="fas fa-info-circle"></i> Choose whether this approval request belongs to your below mentioned department or a specific center.</p>
+                            
+                            <div class="d-flex gap-5 mt-1">
+                                <div class="form-check custom-radio-alloc">
+                                    <input class="form-check-input alloc-toggle-radio" type="radio" name="allocation_type" id="allocSelfDept" value="self_dept" checked style="cursor: pointer;">
+                                    <label class="form-check-label fw-bold" for="allocSelfDept" style="cursor: pointer; color: #333;">
+                                        Self Department ({{ user_department.name|default:"General" }})
+                                    </label>
+                                </div>
+                                <div class="form-check custom-radio-alloc">
+                                    <input class="form-check-input alloc-toggle-radio" type="radio" name="allocation_type" id="allocCenterLoc" value="center" style="cursor: pointer;">
+                                    <label class="form-check-label fw-bold" for="allocCenterLoc" style="cursor: pointer; color: #333;">
+                                        Center Location
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                            {# 🟢 Hidden fallback field to automatically submit 'self_dept' context backend targets if workspace is preset #}
+                            <input type="hidden" name="allocation_type" value="self_dept">
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="subject" class="form-label">Subject <span class="text-danger">*</span></label>
+                            {{ form.subject }}
+                            {% if form.subject.errors %}
+                                <div class="invalid-feedback d-block">{{ form.subject.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Amount ({{ user_currency.symbol }}) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text fw-bold">{{ user_currency.symbol }}</span>
+                                {{ form.amount }} 
+                            </div>
+                            {% if form.amount.errors %}
+                                <div class="invalid-feedback d-block">{{ form.amount.errors.0 }}</div>
+                            {% endif %}
+
+                            {% if is_foreign_currency %}
+                            <div class="mt-2 p-2 rounded" style="background:#f0fff4; border-left:3px solid #28a745;">
+                                <small class="text-muted">
+                                    <i class="fas fa-exchange-alt me-1 text-success"></i>
+                                    Equivalent in INR:
+                                    <strong id="inr_preview" class="text-success ms-1">—</strong>
+                                    <span class="text-muted ms-1" id="rate_note"></span>
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {# 🟢 CONDITIONAL CONTEXT DISPLAY #}
+                        {% if not request.session.active_workspace_center_id %}
+                        <div class="mb-4" id="rowSelfDeptDisplay">
+                            <label class="form-label text-muted fw-semibold">Active Requesting Department Context</label>
+                            <div class="form-control bg-white text-dark fw-bold py-2" style="border-left: 4px solid #1a73e8; border-radius: 6px;">
+                                <i class="fas fa-building me-2 text-primary"></i> {{ user_department.name|default:"General Workspace" }}
+                            </div>
+                        </div>
+
+                        <div class="mb-4 d-none" id="rowCenterSelectContainer">
+                            <label for="selected_center" class="form-label fw-bold" style="color: #444;">
+                                Select Targeted Center Location <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="fas fa-map-marker-alt text-danger"></i></span>
+                                <select name="selected_center" id="selected_center" class="form-select py-2" style="border-radius: 0 6px 6px 0;">
+                                    <option value="" selected>-- Choose Center Location From List --</option>
+                                    {% for center in centers %}
+                                        <option value="{{ center.id }}">{{ center.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-text text-muted mt-1">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                The approval will follow <strong>{{ user_department.name|default:"General" }}</strong>
+                                department rules. Selected center is for reference.
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="form-text mb-4">
+                            <i class="fas fa-info-circle"></i> You can upload documents AFTER creating the form.
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-check"></i> Create Form
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+                    </form>
+
+                    {% if is_foreign_currency %}
+                    <script>
+                    (function() {
+                        const RATE = parseFloat("{{ exchange_rate|default:'1' }}");
+                        const CODE = "{{ user_currency.code }}";
+
+                        const amountInput = document.getElementById('id_amount');
+                        const preview = document.getElementById('inr_preview');
+                        const rateNote = document.getElementById('rate_note');
+
+                        function updatePreview() {
+                            if (!amountInput || !preview) return;
+                            const val = parseFloat(amountInput.value);
+                            if (!isNaN(val) && val > 0) {
+                                const inr = (val * RATE).toLocaleString('en-IN', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                });
+                                preview.textContent = '₹ ' + inr;
+                                if (rateNote) rateNote.textContent = `(1 ${CODE} = ₹${RATE.toFixed(4)}, today's rate)`;
+                            } else {
+                                preview.textContent = '—';
+                                if (rateNote) rateNote.textContent = '';
+                            }
+                        }
+
+                        if (amountInput) {
+                            amountInput.addEventListener('input', updatePreview);
+                        }
+                    })();
+                    </script>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm" style="border-radius: 8px;">
+                <div class="card-header bg-primary text-white">
+                    <strong>Important Information</strong>
+                </div>
+                <div class="card-body">
+
+                    <div class="mb-3 p-2 rounded" style="background:#f0f7ff; border-left: 3px solid #0d6efd;">
+                        <small class="fw-bold text-primary">
+                            <i class="fas fa-building me-1"></i> Your Current Workspace
+                        </small>
+                        <div class="fw-bold">{{ user_department.name|default:"General" }}</div>
+                        <small class="text-muted" id="sidebarTrackText">Expense will follow designated budget routing pathways.</small>
+                    </div>
+
+                    <h6>Before Submitting:</h6>
+                    <ul class="small">
+                        <li>Ensure all details are accurate</li>
+                        <li>Have your documents ready (PDF format)</li>
+                        <li>You can upload documents after creating the form</li>
+                        <li>You cannot modify the form after submission</li>
+                    </ul>
+
+                    <hr>
+
+                    <h6>Approval Process:</h6>
+                    <ol class="small">
+                        <li>Submit form with documents</li>
+                        <li>Operator verification</li>
+                        <li>MK Sabhya approval</li>
+                        <li>Approver 1</li>
+                        <li>Approver 2</li>
+                        <li>Approver 3</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const allocRadios = document.querySelectorAll('.alloc-toggle-radio');
+    const rowSelfDept = document.getElementById('rowSelfDeptDisplay');
+    const rowCenterSelect = document.getElementById('rowCenterSelectContainer');
+    const centerDropdownField = document.getElementById('selected_center');
+    const creationFormObj = document.getElementById('creationFormObj');
+    const sidebarTrackText = document.getElementById('sidebarTrackText');
+
+    function evaluateAllocationVisibility(selectedMode) {
+        if (!rowSelfDept || !rowCenterSelect) return;
+        if (selectedMode === 'self_dept') {
+            rowSelfDept.classList.remove('d-none');
+            rowCenterSelect.classList.add('d-none');
+            if (centerDropdownField) {
+                centerDropdownField.required = false;
+                centerDropdownField.value = ""; 
+                centerDropdownField.classList.remove('is-invalid');
+            }
+            sidebarTrackText.textContent = "Expense will follow department budget limits.";
+        } else if (selectedMode === 'center') {
+            rowSelfDept.classList.add('d-none');
+            rowCenterSelect.classList.remove('d-none');
+            if (centerDropdownField) centerDropdownField.required = true;
+            sidebarTrackText.textContent = "Expense allocated to Center (Department routing applies).";
+        }
+    }
+
+    allocRadios.forEach(radioItem => {
+        radioItem.addEventListener('change', function() {
+            evaluateAllocationVisibility(this.value);
+        });
+    });
+
+    if (creationFormObj) {
+        creationFormObj.addEventListener('submit', function(event) {
+            const radioChecked = document.querySelector('.alloc-toggle-radio:checked');
+            if (radioChecked) {
+                const activeMode = radioChecked.value;
+                if (activeMode === 'center' && centerDropdownField && !centerDropdownField.value) {
+                    event.preventDefault();
+                    centerDropdownField.classList.add('is-invalid');
+                    alert("Please select a valid targeted center location row item to complete your allocation track.");
+                    centerDropdownField.focus();
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

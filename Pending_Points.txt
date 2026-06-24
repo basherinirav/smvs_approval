@@ -1,0 +1,106 @@
+Step
+ 
+4. In Report Permission 
+   If end user is center: Do nothing just tick on Can View Report and map only user center and no other center/department. Also no rights on tick on Can enter Actual Amount. 
+   If end user is department: just tick on Can View Report and map All Center but dont map any other department. Also no rights on tick on Can enter Actual Amount.
+   User create for account: Tick on Can View report. Map All Center / Departments. Tick on Can enter Actual Amount.
+
+
+
+This is a standard script file. Since it is composed of raw text commands, you can pipe it straight into the container database using the standard PostgreSQL command tool
+Backup (800KB)
+docker exec -t smvs_postgres pg_dump -U smvs_approval_user -d smvs_approval > backup.sql
+Restore
+docker exec -i smvs_postgres psql -U smvs_approval_user -d smvs_approval < backup.sql
+
+
+Using the menu binary backup (~263 KB)
+```bash
+docker exec -i smvs_postgres pg_restore -U smvs_approval_user -d smvs_approval --clean --no-owner < SMVS_DB_17062026_0017.sql
+
+
+
+
+
+
+
+
+
+
+                    <!-- Delegate Selection -->
+                    {% if allow_delegate and not is_delegated_to_me %}
+                        <div class="mb-4">
+                            <label class="form-label">Delegate to 3rd Party Verifier</label>
+                            <select name="delegate_to" id="delegate_to" class="form-select">
+                                <option value="">-- Select from existing users --</option>
+                                {% for verifier in third_party_verifiers %}
+                                    <option value="{{ verifier.id }}">
+                                        {{ verifier.get_full_name|default:verifier.username }} 
+                                        ({{ verifier.email }})
+                                    </option>
+                                {% endfor %}
+                                <option value="other">Other (External Person - Enter Email)</option>
+                                </select>
+
+                            <!-- Email field for external person -->
+                            <div id="external_email_div" style="display: none; margin-top: 10px;"> 
+                                <label for="external_email" class="form-label">External Email Address</label>
+                                <input type="email" name="external_email" id="external_email" class="form-control" placeholder="Enter email address">
+                            </div>
+                        </div>
+                    {% endif %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# TextGuru Send SMS API — Python 3 (requests)
+import requests
+
+url = 'https://www.textguru.in/api/v22.0/'
+
+payload = {
+    'username'  : 'smvs.org',
+    'password'  : 'your_password',
+    'source'    : 'TGURUS',
+    'dmobile'   : '918284047608,918284047606',
+    'dlttempid' : '1707160248729731',
+    'message'   : 'Your OTP is 1234. Valid 10 mins.',
+}
+
+try:
+    r = requests.post(url, data=payload, timeout=30)
+    r.raise_for_status()
+    print("Response:", r.text)
+except requests.exceptions.RequestException as e:
+    print("Error:", e)
+
+
+Sample API Responses
+Success → 1701|success|9182840xxxxx:success|9182840xxxxx:success
+Bad Login → 1702|failed|Invalid credentials
+DLT Error → 1703|failed|Template mismatch or not approved
+Low Balance → 1705|failed|Insufficient credits
+
+
+i
+API Response Codes
+Common Response Codes & Meanings
+Code	Status	Meaning
+1701	Success	SMS submitted successfully to the operator
+1702	Failed	Invalid username or password
+1703	Failed	Invalid or mismatched DLT Template ID
+1704	Failed	Invalid or malformed mobile number
+1705	Failed	Insufficient credits — please recharge your account
+1706	Failed	Sender ID / Header not registered or blocked by operator
+1707	Failed	Account blocked or suspended — contact support

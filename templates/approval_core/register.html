@@ -1,0 +1,537 @@
+{% extends 'base.html' %}
+
+{% block title %}Register - SMVS Approval System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow-lg">
+            <div class="card-body p-5">
+                <h2 class="text-center mb-4" style="color: var(--primary-color);">
+                    <i class="fas fa-user-plus"></i> New User Registration Form
+                </h2>
+
+                <div class="alert alert-danger d-none" id="globalFormErrorBanner">
+                    <i class="fas fa-exclamation-circle me-2"></i> <span id="globalErrorText">Please fill out all compulsory fields marked with a red asterisk (*).</span>
+                </div>
+
+                <form method="post" novalidate id="registrationForm">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="username" class="form-label">Username <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="username" name="username" value="{{ form.username.value|default:'' }}" required>
+                            <div class="invalid-feedback" id="usernameError"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ form.email.value|default:'' }}" required>
+                            <div class="invalid-feedback" id="emailError"></div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" value="{{ form.first_name.value|default:'' }}" required>
+                            <div class="invalid-feedback" id="firstNameError"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" value="{{ form.last_name.value|default:'' }}" required>
+                            <div class="invalid-feedback" id="lastNameError"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 d-none" id="segmentDropdownWrapper">
+                        <label class="form-label fw-bold" style="color: var(--primary-color);">Assigned Departments / Centers <span class="text-danger">*</span></label>
+                        <div class="card p-3 bg-light" style="max-height: 250px; overflow-y: auto; border: 1px solid #ced4da; border-radius: .25rem;">
+                            <div id="checkbox_container_zone"></div>
+                        </div>
+                        <div class="small text-muted mt-1"><i class="fas fa-info-circle"></i> You can check multiple departments if applicable to your profile status.</div>
+                    </div>
+                    <input type="hidden" id="dept_center" name="dept_center" value="">
+
+                    <div class="mb-3 d-none" id="centerEmailWrapper">
+                        <label for="center_verifier_email" class="form-label fw-bold text-danger">Local Center Email ID <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-envelope-shield"></i></span>
+                            <input type="email" class="form-control" id="center_verifier_email" name="center_verifier_email" 
+                                   placeholder="Enter your official Center Email ID to verify your location">
+                        </div>
+                        <div class="invalid-feedback d-block" id="centerEmailError"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="mobile_input" class="form-label">Mobile Number <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <select class="form-select" id="country_code" style="max-width: 180px;">
+                                {% for country in countries %}
+                                    <option value="{{ country.code }}" data-dial-code="+{{ country.phone_code|default:'91' }}">
+                                        {{ country.name }} (+{{ country.phone_code|default:"91" }})
+                                    </option>
+                                {% empty %}
+                                    <option value="IND" data-dial-code="+91" selected>India (+91)</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" class="form-control" id="mobile_input" placeholder="Enter mobile number" required>
+                            <div class="invalid-feedback" id="mobileInputError"></div>
+                        </div>
+                        <input type="hidden" id="mobile_number" name="mobile_number" value="">
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-1">
+                            <label for="password1" class="form-label mb-0">Password <span class="text-danger">*</span></label>
+                            <span class="text-muted small fw-normal">(Min 8 Characters, 1 Uppercase, 1 Lowercase, 1 Number, 1 Special Character)</span>
+                        </div>
+                        <input type="password" class="form-control" id="password1" name="password1" placeholder="Create a secure password" required>
+                        <div class="invalid-feedback" id="password1Error"></div>
+                        
+                        <div class="card bg-light mt-2 p-3 small d-none" id="passwordCriteriaBox" style="border-left: 4px solid #dc3545; border-radius: 8px;">
+                            <div class="fw-bold mb-1 text-danger"><i class="fas fa-exclamation-triangle"></i> Incorrect Format Remark: Please fulfill the remaining rules:</div>
+                            <ul class="list-unstyled mb-0 row">
+                                <li class="col-6 text-danger small" id="rule-length"><i class="fas fa-times-circle me-1"></i> Min 8 characters</li>
+                                <li class="col-6 text-danger small" id="rule-upper"><i class="fas fa-times-circle me-1"></i> 1 Uppercase (A-Z)</li>
+                                <li class="col-6 text-danger small" id="rule-lower"><i class="fas fa-times-circle me-1"></i> 1 Lowercase (a-z)</li>
+                                <li class="col-6 text-danger small" id="rule-digit"><i class="fas fa-times-circle me-1"></i> 1 Number (0-9)</li>
+                                <li class="col-12 text-danger small mt-1" id="rule-special"><i class="fas fa-times-circle me-1"></i> 1 Special Character (@, #, $, %, etc.)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password2" class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" id="password2" name="password2" placeholder="Repeat your password exactly" required>
+                        <div class="invalid-feedback" id="confirmPasswordError"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2 mb-3">
+                        <i class="fas fa-user-check"></i> Register
+                    </button>
+                </form>
+
+                <hr>
+                <p class="text-center mb-0">
+                    Already have an account? <a href="{% url 'login' %}" class="text-decoration-none">Login here</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const formElement = document.getElementById('registrationForm');
+    const emailInput = document.getElementById('email'); 
+    const usernameInput = document.getElementById('username');
+    const firstNameInput = document.getElementById('first_name');
+    const lastNameInput = document.getElementById('last_name');
+    
+    const segmentDropdownWrapper = document.getElementById('segmentDropdownWrapper');
+    const checkboxContainerZone = document.getElementById('checkbox_container_zone');
+    const centerEmailWrapper = document.getElementById('centerEmailWrapper');
+    const centerEmailInput = document.getElementById('center_verifier_email');
+    const centerEmailError = document.getElementById('centerEmailError');
+    const globalFormErrorBanner = document.getElementById('globalFormErrorBanner');
+    
+    const passwordInput = document.getElementById('password1');
+    const confirmPasswordInput = document.getElementById('password2');
+    const criteriaBox = document.getElementById('passwordCriteriaBox');
+    
+    const countryCodeSelect = document.getElementById('country_code');
+    const mobileInput = document.getElementById('mobile_input');
+    const hiddenMobileNumber = document.getElementById('mobile_number');
+    const hiddenDeptCenter = document.getElementById('dept_center');
+
+    let isEmailValid = false;
+    let isUsernameValid = false;
+    let isCenterVerified = false;
+    let isPasswordValid = false;
+
+    // Default country selection focus to India
+    for (let i = 0; i < countryCodeSelect.options.length; i++) {
+        if (countryCodeSelect.options[i].value === 'IND') {
+            countryCodeSelect.selectedIndex = i;
+            break;
+        }
+    }
+
+    // ── LIVE FLAG CLEARDOWN MONITOR (KILLS THE RETYPING BUG INSTANTLY) ──
+    emailInput.addEventListener('input', function() {
+        // The split-second a user alters their email text, revoke all authority access flags!
+        isEmailValid = false;
+        isCenterVerified = false;
+        
+        // Wipe out hidden parameters so a tampered text value can't post
+        hiddenDeptCenter.value = '';
+        
+        // Instantly hide the checkbox card grid block and flush its contents
+        segmentDropdownWrapper.classList.add('d-none');
+        centerEmailWrapper.classList.add('d-none'); // 🟢 Resets manual block wrapper state
+        centerEmailInput.value = '';
+        centerEmailInput.classList.remove('is-invalid', 'is-valid');
+        centerEmailError.textContent = '';
+        checkboxContainerZone.innerHTML = '';
+        
+        // Remove old green verification text badges
+        removeDomainAlert();
+        
+        // If the browser added red invalid outlines, strip them as they type
+        this.classList.remove('is-invalid');
+        const errDiv = document.getElementById('emailError');
+        if (errDiv) {
+            errDiv.textContent = '';
+            errDiv.className = 'invalid-feedback';
+        }
+    });
+
+    // Real-time input typing monitoring loop for other basic text fields
+    const inputsArray = [usernameInput, firstNameInput, lastNameInput, mobileInput, passwordInput, confirmPasswordInput];
+    inputsArray.forEach(input => {
+        input.addEventListener('input', function() {
+            if (this.value.trim() !== '') {
+                this.classList.remove('is-invalid');
+                let targetId = this.id === 'mobile_input' ? 'mobileInputError' : this.id + 'Error';
+                const errDiv = document.getElementById(targetId);
+                if (errDiv) {
+                    errDiv.textContent = '';
+                    errDiv.className = 'invalid-feedback';
+                }
+                
+                // Hide global banner if all visible empty fields are cleared
+                const remainingErrors = formElement.querySelectorAll('.form-control.is-invalid');
+                if (remainingErrors.length === 0) {
+                    globalFormErrorBanner.classList.add('d-none');
+                }
+            }
+        });
+    });
+
+    // ── LIVE PASSWORD EVALUATOR ENGINE ──
+    passwordInput.addEventListener('input', function() {
+        const val = this.value;
+        if (!val) {
+            criteriaBox.classList.add('d-none'); 
+            isPasswordValid = false;
+            return;
+        }
+        
+        const rules = {
+            length: val.length >= 8,
+            upper: /[A-Z]/.test(val),
+            lower: /[a-z]/.test(val),
+            digit: /[0-9]/.test(val),
+            special: /[@#\$%\^&\*\(\)_\+\-\=\[\]\{\};':",\.\/<>\?\\|`~!█]/.test(val)
+        };
+
+        let currentInputIsValid = true;
+
+        Object.keys(rules).forEach(ruleKey => {
+            const row = document.getElementById(`rule-${ruleKey}`);
+            if (rules[ruleKey]) {
+                row.className = ruleKey === 'special' ? "col-12 text-success fw-bold small" : "col-6 text-success fw-bold small";
+                row.querySelector('i').className = "fas fa-check-circle me-1";
+            } else {
+                row.className = ruleKey === 'special' ? "col-12 text-danger small" : "col-6 text-danger small";
+                row.querySelector('i').className = "fas fa-times-circle me-1";
+                currentInputIsValid = false;
+            }
+        });
+
+        isPasswordValid = currentInputIsValid;
+        if (isPasswordValid) {
+            passwordInput.classList.remove('is-invalid');
+            passwordInput.classList.add('is-valid');
+            criteriaBox.classList.add('d-none'); 
+        } else {
+            passwordInput.classList.remove('is-valid');
+            criteriaBox.classList.remove('d-none'); 
+        }
+    });
+
+    confirmPasswordInput.addEventListener('input', function() {
+        const confirmErr = document.getElementById('confirmPasswordError');
+        if (this.value !== passwordInput.value) {
+            this.classList.add('is-invalid');
+            confirmErr.className = 'invalid-feedback d-block fw-bold';
+            confirmErr.textContent = "Passwords do not match!";
+        } else {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+            confirmErr.textContent = "";
+        }
+    });
+
+    // ── GATED IDENTITY VERIFIER GATEWAY (AJAX WITH STRICT DB RECORD VALIDATION) ──
+    function evaluateIdentityGating() {
+        const emailValue = emailInput.value.trim();
+        const usernameValue = usernameInput.value.trim();
+     
+        if (usernameValue) {
+            fetch(`/ajax/check-registration-email/?username=${encodeURIComponent(usernameValue)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.is_duplicate_username) {
+                        applyErrorState(usernameInput, 'usernameError', "This username is already taken. Please choose another.");
+                        isUsernameValid = false;
+                    } else {
+                        clearErrorState(usernameInput, 'usernameError');
+                        isUsernameValid = true;
+                    }
+                });
+        }
+
+        if (!emailValue) return;
+
+        const emailStructureRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailStructureRegex.test(emailValue)) {
+            applyErrorState(emailInput, 'emailError', "Please enter a valid email address format (e.g., name@domain.com).");
+            centerEmailWrapper.classList.add('d-none');
+            segmentDropdownWrapper.classList.add('d-none');
+            removeDomainAlert();
+            isEmailValid = false;
+            return;
+        } else {
+            clearErrorState(emailInput, 'emailError');
+        }
+
+        fetch(`/ajax/check-registration-email/?email=${encodeURIComponent(emailValue)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.is_smvs_domain) {
+                        // 💡 STRICT SECURITY SECURITY UPGRADE:
+                        // Only allow registration if the email handle exists inside the EmailMapping database table!
+                        if (data.match_type && data.matches.length > 0) {
+                            centerEmailWrapper.classList.add('d-none');
+                            centerEmailInput.required = false;
+                            isCenterVerified = true;
+                            isEmailValid = true;
+                            
+                            segmentDropdownWrapper.classList.remove('d-none');
+                            checkboxContainerZone.innerHTML = ''; 
+                            
+                            data.matches.forEach(match => {
+                                const div = document.createElement('div');
+                                div.className = "form-check mb-2";
+                                div.innerHTML = `
+                                    <input class="form-check-input dept-checkbox-item" type="checkbox" 
+                                           value="${match.id}" id="chk_${match.id}" checked>
+                                    <label class="form-check-label fw-semibold mb-0" for="chk_${match.id}" style="cursor: pointer;">
+                                        ${match.name}
+                                    </label>
+                                `;
+                                checkboxContainerZone.appendChild(div);
+                            });
+                            
+                            removeDomainAlert();
+                            insertDomainAlert(`ℹ️ Multi Department Leader profile recognized. Choose your authorized segments above.`, 'info');
+                        } 
+                        else {
+                            // 🚫 REJECT: Email domain structure matches, but no user link exists in system mappings!
+                            segmentDropdownWrapper.classList.add('d-none');
+                            hiddenDeptCenter.value = '';
+                            removeDomainAlert();
+                            
+                            // Highlight the input box red and throw a clear security warning
+                            emailInput.classList.add('is-invalid');
+                            applyErrorState(emailInput, 'emailError', "Access Denied: This corporate email address is not registered in our system mappings. Please contact your administrator.");
+                            isEmailValid = false;
+                            isCenterVerified = false;
+                        }
+                    } else {
+                        // External public route logic context rules
+                        segmentDropdownWrapper.classList.add('d-none');
+                        removeDomainAlert();
+
+                        // Force layout to render manual input verification form fields
+                        centerEmailWrapper.classList.remove('d-none');
+                        centerEmailInput.required = true;
+                        centerEmailInput.value = '';
+                        isCenterVerified = false;
+                        isEmailValid = true;
+                        
+                        insertDomainAlert(`ℹ️ Public domain email detected. Manual Center verification security check required below.`, 'info');
+                    }
+                }
+            })
+            .catch(err => console.error('Error running identity gating checks:', err));
+    }
+
+    emailInput.addEventListener('blur', evaluateIdentityGating);
+    usernameInput.addEventListener('blur', evaluateIdentityGating);
+
+    // ── CENTER EMAIL CHECK FOR PUBLIC EXTERNAL DOMAINS ──
+    centerEmailInput.addEventListener('blur', function() {
+        const verifierEmail = this.value.trim();
+        if (!verifierEmail) return;
+
+        fetch(`/ajax/check-registration-email/?email=${encodeURIComponent(verifierEmail)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.match_type === 'center' && data.matches.length > 0) {
+                    hiddenDeptCenter.value = data.matches[0].id;
+                    isCenterVerified = true;
+                    centerEmailInput.classList.remove('is-invalid');
+                    centerEmailInput.classList.add('is-valid');
+                    centerEmailError.className = "small mt-1 fw-bold text-success";
+                    centerEmailError.textContent = "✓ Center verified. Your registration will be routed to your Center Sant for authorization.";
+                } else {
+                    hiddenDeptCenter.value = '';
+                    isCenterVerified = false;
+                    centerEmailInput.classList.remove('is-valid');
+                    centerEmailInput.classList.add('is-invalid');
+                    centerEmailError.className = "small mt-1 fw-bold text-danger";
+                    centerEmailError.textContent = "The Email ID provided is not linked to any active Center. Please check with your Center Sant or Agresar.";
+                }
+            })
+            .catch(err => console.error('Error validating center email mapping:', err));
+    });
+
+    // ── COMBINED FORM SUBMIT CAPTURE INTERCEPTOR ──
+    formElement.addEventListener('submit', function(e) {
+        let hasBlankErrors = false;
+        let firstFocusInput = null;
+
+        // 📝 1. EXPLICIT FIELD-LEVEL COMPULSORY VALIDATION CHECK LOOP (TRIGGERS RED BORDERS)
+        const fieldsList = [
+            { field: usernameInput, id: 'usernameError', name: "Username" },
+            { field: emailInput, id: 'emailError', name: "Email Address" },
+            { field: firstNameInput, id: 'firstNameError', name: "First Name" },
+            { field: lastNameInput, id: 'lastNameError', name: "Last Name" },
+            { field: mobileInput, id: 'mobileInputError', name: "Mobile Number" },
+            { field: passwordInput, id: 'password1Error', name: "Password" },
+            { field: confirmPasswordInput, id: 'confirmPasswordError', name: "Confirm Password" }
+        ];
+
+        fieldsList.forEach(item => {
+            if (item.field.value.trim() === "") {
+                item.field.classList.add('is-invalid'); // 💡 Adds the red border outline instantly!
+                hasBlankErrors = true;
+                if (!firstFocusInput) firstFocusInput = item.field;
+
+                const errorLabel = document.getElementById(item.id);
+                if (errorLabel) {
+                    errorLabel.className = 'invalid-feedback d-block fw-bold';
+                    errorLabel.textContent = `This field is compulsory. Please enter your ${item.name}.`;
+                }
+            }
+        });
+
+        // 💡 NEW APPARATUS: If missing compulsory values, present banner, halt, and focus field element
+        if (hasBlankErrors) {
+            e.preventDefault();
+            globalFormErrorBanner.classList.remove('d-none');
+            document.getElementById('globalErrorText').textContent = "Please fill out all compulsory fields marked with a red asterisk (*).";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (firstFocusInput) firstFocusInput.focus();
+            return;
+        }
+
+        // 📝 2. CONSTRUCT DIAL PREFIX MOBILE NUMBERS
+        const selectedOption = countryCodeSelect.options[countryCodeSelect.selectedIndex];
+        const mappedPhonePrefix = selectedOption.getAttribute('data-dial-code') || '+91'; 
+        const cleanDigits = mobileInput.value.trim().replace(/\s+/g, '');
+        hiddenMobileNumber.value = mappedPhonePrefix + cleanDigits;
+
+        // 📝 3. DYNAMIC DOMAIN CONTEXT RECHECKING & PROCESS CHECKBOX STRINGS
+        const emailValue = emailInput.value.trim().toLowerCase();
+        const isSmvsDomain = /@([a-z0-9-]+\.)*smvs\.org$/.test(emailValue);
+
+        if (isSmvsDomain) {
+            const checkedBoxes = document.querySelectorAll('.dept-checkbox-item:checked');
+            const checkedValues = Array.from(checkedBoxes).map(cb => cb.value);
+            hiddenDeptCenter.value = checkedValues.join(',');
+
+            if (!isEmailValid) {
+                e.preventDefault();
+                emailInput.focus();
+                alert("Registration stopped: This email address is not registered in our system mappings.");
+                return;
+            }
+
+            if (!isUsernameValid) {
+                e.preventDefault();
+                usernameInput.focus();
+                alert("Registration stopped: The username you selected is already taken.");
+                return;
+            }
+            if (!segmentDropdownWrapper.classList.contains('d-none') && checkedValues.length === 0) {
+                e.preventDefault();
+                globalFormErrorBanner.classList.remove('d-none');
+                document.getElementById('globalErrorText').textContent = "Please check at least one department checkbox workspace to continue.";
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+        } else {
+            if (!isCenterVerified) {
+                e.preventDefault();
+                centerEmailInput.focus();
+                alert("Registration stopped: Please provide a valid official Center Email ID to pass verification mapping.");
+                return;
+            }
+        }
+
+        // 📝 4. COMPLEXITY PARAMETERS CHECK
+        if (!isPasswordValid) {
+            e.preventDefault();
+            passwordInput.focus();
+            criteriaBox.classList.remove('d-none'); 
+            alert("Your password does not meet the safety complexity rule parameters.");
+            return;
+        }
+
+        if (passwordInput.value !== confirmPasswordInput.value) {
+            e.preventDefault();
+            confirmPasswordInput.focus();
+            alert("Passwords do not match!");
+            return;
+        }
+    });
+
+    function applyErrorState(input, errorDivId, text) {
+        input.classList.add('is-invalid');
+        const errDiv = document.getElementById(errorDivId);
+        if (errDiv) {
+            errDiv.className = 'invalid-feedback d-block fw-bold';
+            errDiv.textContent = text;
+        }
+    }
+
+    function clearErrorState(input, errorDivId) {
+        input.classList.remove('is-invalid');
+        const errDiv = document.getElementById(errorDivId);
+        if (errDiv) {
+            errDiv.className = 'invalid-feedback';
+            errDiv.textContent = '';
+        }
+    }
+
+    function insertDomainAlert(message, type) {
+        removeDomainAlert();
+        const alertClass = type === 'success' ? 'text-success' : 'text-info';
+        const infoDiv = document.createElement('div');
+        infoDiv.id = 'domain-verification-badge';
+        infoDiv.className = `small mt-1 fw-bold ${alertClass}`;
+        infoDiv.innerHTML = message;
+        emailInput.parentNode.appendChild(infoDiv);
+    }
+
+    function removeDomainAlert() {
+        const target = document.getElementById('domain-verification-badge');
+        if (target) target.remove();
+    }
+});
+</script>
+
+{% endblock %}

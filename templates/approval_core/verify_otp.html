@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify OTP - SMVS Approval System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow-lg border-0">
+            <div class="card-body p-5">
+                <h2 class="text-center mb-4" style="color: var(--primary-color);">
+                    <i class="fas fa-shield-alt"></i> Verify OTP
+                </h2>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if not otp_verified %}
+                        <!-- 🔓 STEP 1 DISPLAY: Show ONLY OTP Field Initially -->
+                        <div class="mb-4">
+                            <label for="otp" class="form-label fw-bold">Enter 6-Digit OTP</label>
+                            <input type="text" class="form-control form-control-lg text-center" 
+                                   id="otp" name="otp" maxlength="6" placeholder="000000" 
+                                   style="letter-spacing: 5px; font-size: 1.5rem;" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 mt-2">
+                            <i class="fas fa-arrow-circle-right"></i> Verify OTP
+                        </button>
+                    {% else %}
+                        <!-- 🔒 STEP 2 DISPLAY: Password Fields with Clear Policy Guidance -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label for="password" class="form-label fw-bold mb-0">New Password</label>
+                                <small class="text-muted">(Min 8 Characters, 1 Uppercase, 1 Lowercase, 1 Number, 1 Special)</small>
+                            </div>
+                            <input type="password" class="form-control mt-1" id="password" name="password" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label fw-bold">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100 py-2 mt-3">
+                            <i class="fas fa-check-circle"></i> Reset Password
+                        </button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

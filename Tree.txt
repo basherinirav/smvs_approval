@@ -1,0 +1,63 @@
+smvs_approval_config/                  ← Project Root
+├── manage.py
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+├── .env
+├── setup_initial_data.py
+├── verify_database.py
+├── smvs_approval_config/              ← Main Project Package
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
+│   ├── asgi.py
+│   └── wsgi.py
+│
+├── approval_core/                     ← Core App (Data + Admin + Services)
+│   ├── __init__.py
+│   ├── apps.py
+│   ├── middleware.py
+│   ├── models.py
+│   ├── forms.py
+│   ├── views.py
+│   ├── views_dashboard.py
+│   ├── services.py
+│   ├── signals.py
+│   ├── import_export.py
+│   ├── tests.py
+│   │
+│   ├── admin/                         ← Split Admin (Best Practice)
+│   │   ├── __init__.py                ← Imports all admin files
+│   │   ├── masters.py
+│   │   ├── pre_approval.py
+│   │   ├── approval_process.py
+│   │   ├── logs.py
+│   │   └── auth_admin.py
+│   │
+│   └── migrations/                    ← (will be generated)
+│
+├── approval_workflow/                 ← Workflow + UI Layer
+│   ├── __init__.py
+│   ├── apps.py
+│   ├── urls.py
+│   ├── views.py
+│   ├── workflows.py
+│   ├── models.py                      ← Empty (good)
+│   ├── admin.py                       ← Empty (good)
+│   ├── tests.py
+│   │
+│   └── templates/approval_core/       ← Templates are inside approval_workflow (common pattern)
+│       ├── base.html
+│       ├── login.html
+│       ├── register.html
+│       ├── create_form.html
+│       ├── form_detail.html
+│       ├── approve_form.html
+│       ├── reject_form.html
+│       ├── enduser_dashboard.html
+│       ├── approver_dashboard.html
+│       ├── admin_dashboard.html
+│       └── forms_list.html
+│
+└── templates/                         ← Global templates (if any) - currently empty
+    └── (possibly base overrides)

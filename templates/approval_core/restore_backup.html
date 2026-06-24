@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Restore System Backup - SMVS{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card shadow-lg border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-upload me-2"></i>System Restoration Utility</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-warning border-warning">
+                        <h5><i class="fas fa-exclamation-triangle"></i> CRITICAL WARNING</h5>
+                        <p class="mb-0">Restoring a backup will <strong>overwrite all current data</strong>. Data created after the last backup date will be permanently lost.</p>
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data" id="restoreForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">1. Select Restoration Type:</label>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-check card p-3 h-100 border text-center">
+                                        <input class="form-check-input mx-auto mb-2" type="radio" name="restore_type" value="full" id="typeFull" checked>
+                                        <label class="form-check-label fw-bold" for="typeFull">Full System Restore</label>
+                                        <small class="text-muted">Restore Database + Media Files (.tar.gz)</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check card p-3 h-100 border text-center">
+                                        <input class="form-check-input mx-auto mb-2" type="radio" name="restore_type" value="db_only" id="typeDb">
+                                        <label class="form-check-label fw-bold" for="typeDb">Database Only</label>
+                                        <small class="text-muted">Restore Records & History (.sql)(Faster)</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">2. Upload Backup File (.tar.gz or .sql):</label>
+                            <input type="file" name="backup_file" class="form-control form-control-lg" required id="fileInput">
+                            <small class="text-info">System will verify the version before importing.</small>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger btn-lg" id="btnRestore">
+                                <span class="spinner-border spinner-border-sm d-none" id="restoreSpinner" role="status" aria-hidden="true"></span>
+                                <span id="btnText"><i class="fas fa-check-circle me-1"></i> Start Restoration Process</span>
+                            </button>
+                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary" id="btnCancel">Cancel</a>
+                        </div>                     
+                    </form>
+                    <div id="progressMessage" class="mt-3 text-center d-none">
+                        <div class="alert alert-info">
+                            <i class="fas fa-cog fa-spin me-2"></i> 
+                            <strong>Restoration in progress...</strong> 
+                            <br>Please do not close this window or refresh the page.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('restoreForm').onsubmit = function() {
+        const typeElement = document.querySelector('input[name="restore_type"]:checked');
+        const typeLabel = typeElement.nextElementSibling.innerText;
+        
+        // 1. Initial Confirmation
+        const confirmed = confirm(`⚠️ FINAL CONFIRMATION ⚠️\n\nYou are about to perform a ${typeLabel}.\nThis will replace ALL current data.\n\nAre you absolutely sure you want to proceed?`);
+
+        if (confirmed) {
+            // ✅ 2. Trigger Loading UI
+            const btn = document.getElementById('btnRestore');
+            const spinner = document.getElementById('restoreSpinner');
+            const btnText = document.getElementById('btnText');
+            const cancelBtn = document.getElementById('btnCancel');
+            const progressMsg = document.getElementById('progressMessage');
+            const fileInput = document.getElementById('fileInput');
+
+            // Disable all interactive elements
+            btn.disabled = true;
+            cancelBtn.classList.add('disabled');
+            fileInput.readOnly = true;
+
+            // Show Spinner & Change Text
+            spinner.classList.remove('d-none');
+            progressMsg.classList.remove('d-none');
+            btnText.innerText = " Processing Restoration...";
+
+            return true; // Allow form submission
+        }
+        
+        return false; // Cancel form submission
+    };
+</script>
+
+{% endblock %}

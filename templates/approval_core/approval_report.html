@@ -1,0 +1,542 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load l10n %}
+{% block title %}Approval Report — SMVS{% endblock %}
+
+{% block extra_css %}
+<style>
+:root { --rpt-dark:#0d3b6e; }
+.filter-bar   { background:#f8f9fa; border-radius:10px; padding:18px 20px; margin-bottom:24px; border:1px solid #dee2e6; }
+.summary-tile { border-radius:10px; padding:18px; text-align:center; color:#fff; }
+.tile-blue    { background:linear-gradient(135deg,#0d6efd,#084298); }
+.tile-green   { background:linear-gradient(135deg,#198754,#0a3622); }
+.tile-orange  { background:linear-gradient(135deg,#fd7e14,#6d2a00); }
+.tile-purple  { background:linear-gradient(135deg,#6f42c1,#432874); }
+.tile-num     { font-size:1.8rem; font-weight:700; }
+.tile-lbl     { font-size:.85rem; opacity:.9; }
+.yr-badge     { display:inline-block; padding:3px 10px; border-radius:20px; font-size:.78rem; font-weight:600; background:#e9ecef; color:#495057; }
+.diff-pos     { color:#198754; font-weight:600; }
+.diff-neg     { color:#dc3545; font-weight:600; }
+.diff-zero    { color:#6c757d; }
+.section-head { background:var(--rpt-dark); color:#fff; padding:10px 16px; border-radius:6px 6px 0 0; font-weight:600; }
+.table th     { background:var(--rpt-dark); color:#fff; white-space:nowrap; vertical-align:middle; }
+.table-hover tbody tr:hover { background:#eef4ff; }
+.no-actual    { background:#fff8e1; }
+.report-card  { border-radius:10px; box-shadow:0 2px 12px rgba(0,0,0,.08); border:none; }
+.modal { animation: none !important; transition: none !important; }
+/* ✅ PROFESSIONAL PRINT CSS */
+    @media print {
+        @page { size: landscape; margin: 1cm; }
+        
+        /* 1. Force Visibility */
+        .table-responsive { overflow: visible !important; display: block !important; }
+        .table { display: table !important; width: 100% !important; border: 1px solid #dee2e6 !important; }
+        
+        /* 2. Professional Header Center */
+        .d-print-block { display: block !important; text-align: center !important; width: 100% !important; }
+        
+        /* 3. Force Colors */
+        .summary-tile, .badge, .bg-primary, .table-dark th {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* 4. Hide Web-only Elements (Fixes the 'Circles' issue) */
+        .navbar, .filter-bar, .no-print, .d-print-none, .btn, nav, #footer, .summary-tile {
+            display: none !important;
+        }
+        
+        body { background-color: white !important; padding: 0 !important; }
+        .report-card { border: none !important; box-shadow: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="d-none d-print-block mb-4 text-center">
+        <h2 class="fw-bold mb-1">SMVS Approval System</h2>
+        <h4 class="text-primary mb-2">Center / Department Approval Report</h4>
+        <div class="mb-2">
+            <p class="mb-0 fw-semibold text-muted">Notes: Detailed summary of approved expenditures and work completion status.</p>
+        </div> 
+        <div class="border-top border-bottom py-1 mt-2">
+            <span class="fw-bold">As on: </span><span id="print-local-time"></span>
+        </div>
+    </div>
+
+  <!-- PAGE HEADER -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 d-print-none">
+    <div>
+      <h4 class="mb-0"><i class="fas fa-chart-bar text-primary me-2"></i>Center / Department Approval Report</h4>
+      <small class="text-muted">Permission-based | Yearly comparison | Approved vs Actual</small>
+    </div>
+    <div class="no-print d-flex gap-2 d-print-none">
+      <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-print me-1"></i> Print
+      </button>
+      <a href="?{{ request.GET.urlencode }}&export=csv" class="btn btn-outline-success btn-sm">
+        <i class="fas fa-file-csv me-1"></i> Export CSV
+      </a>
+    </div>
+  </div>
+
+  <!-- FILTER BAR - Dynamic based on permission -->
+  <form method="get" class="filter-bar no-print">
+    <div class="row g-3 align-items-end d-print-none">
+
+      <!-- View By -->
+      <div class="col-12 col-md-2 d-print-none">
+        <label class="form-label fw-bold mb-1 small">View By</label>
+        <select name="filter_type" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="center" selected>Center-wise</option>
+
+         {% if show_department_filter %}
+         <option value="department" {% if filter_type == 'department' %}selected{% endif %}>Department-wise</option>
+         {% endif %}
+        </select>
+      </div>
+
+      <!-- Center Dropdown (shown for Center users by default) -->
+      <div class="col-12 col-md-3" id="center-filter d-print-none" style="{% if not is_department_user %}display:block{% else %}display:none{% endif %}">
+          <label class="form-label fw-bold mb-1 small">
+              {% if is_department_user %}
+                  Department
+              {% else %}
+                  Center
+              {% endif %}
+          </label>
+
+          {% if is_center_user %}
+              <!-- 🔒 Hidden input ensures value is sent -->
+              <input type="hidden" name="center_id" value="{{ center_id }}">
+          {% endif %}
+
+          <select name="center_id" class="form-select form-select-sm"
+          {% if is_center_user %}
+              disabled
+          {% elif is_end_user and not show_department_filter %}
+              disabled
+          {% endif %}>
+              {% if not is_center_user %}
+              <option value="">— All Centers —</option>
+              {% endif %}
+              {% for c in all_centers %}
+                  <option value="{{ c.id }}"
+                      {% if center_id == c.id|stringformat:"s" %}
+                          selected
+                      {% elif is_center_user and c.name == user_center_name %}
+                          selected
+                      {% endif %}>
+                      {{ c.code }} — {{ c.name }}
+                  </option>
+              {% endfor %}
+          </select>
+      </div>
+
+      <!-- Department Dropdown -->
+      {% if show_department_filter %}
+      <div class="col-12 col-md-3 d-print-none" id="dept-filter">
+        <label class="form-label fw-bold mb-1 small">Department (opt)</label>
+        <select name="dept_id" class="form-select form-select-sm"
+        {% if is_department_user and not multi_department %}disabled{% endif %}>
+          <option value="">— All —</option>
+          {% for d in all_departments %}
+            <option value="{{ d.id }}"
+                {% if dept_id == d.id|stringformat:"s" %}
+                    selected
+                {% elif is_department_user and allowed_departments and d.id == allowed_departments.0.id %}
+                    selected
+                {% endif %}>
+              {{ d.code }} — {{ d.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <div class="col-6 col-md-1 d-print-none">
+        <label class="form-label fw-bold mb-1 small">Year From</label>
+        <select name="year_from" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for yr in available_years %}
+            <option value="{{ yr|stringformat:'i' }}" {% if year_from == yr|stringformat:"i" %}selected{% endif %}>{{ yr|stringformat:"i" }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-1 d-print-none">
+        <label class="form-label fw-bold mb-1 small">Year To</label>
+        <select name="year_to" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for yr in available_years %}
+            <option value="{{ yr|stringformat:'i' }}" {% if year_to == yr|stringformat:"i" %}selected{% endif %}>{{ yr|stringformat:"i" }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2 d-flex gap-2 d-print-none">
+        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+          <i class="fas fa-filter me-1"></i> Apply
+        </button>
+        <a href="{% url 'approval_report' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="fas fa-times"></i>
+        </a>
+      </div>
+    </div>
+  </form>
+
+  <!-- SUMMARY TILES -->
+  <div class="row g-3 mb-4 d-print-none">
+    <div class="col-6 col-md-3">
+      <div class="summary-tile tile-blue h-100">
+        <div class="tile-num">{{ total_count }}</div>
+        <div class="tile-lbl"><i class="fas fa-file-alt me-1"></i>Approved Forms</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="summary-tile tile-green h-100">
+        <div class="tile-num">₹{{ total_approved|floatformat:0 }}</div>
+        <div class="tile-lbl"><i class="fas fa-check-circle me-1"></i>Total Approved Amt</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="summary-tile tile-orange h-100">
+        <div class="tile-num">₹{{ total_actual|floatformat:0 }}</div>
+        <div class="tile-lbl"><i class="fas fa-rupee-sign me-1"></i>Total Actual Spent</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="summary-tile tile-purple h-100">
+        <div class="tile-num">{% if total_diff >= 0 %}+{% endif %}₹{{ total_diff|floatformat:0 }}</div>
+        <div class="tile-lbl"><i class="fas fa-balance-scale me-1"></i>Net Saving</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- YEARLY COMPARISON -->
+  {% if yearly_summary %}
+  <div class="card report-card mb-4 d-print-none">
+    <div class="section-head">
+      <i class="fas fa-calendar-alt me-2"></i>Year-wise Comparison
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-bordered table-sm mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th class="text-center">Year</th>
+              <th class="text-center">Forms</th>
+              <th class="text-end">Requested (₹ INR)</th>
+              <th class="text-end">Approved (₹ INR)</th>
+              <th class="text-end">Actual Spent (₹ INR)</th>
+              <th class="text-end">Saving / Overrun (₹ INR)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for yr, data in yearly_summary.items %}
+            <tr>
+              <td class="text-center">{{ yr|stringformat:"i" }}</td>
+              <td class="text-center">{{ data.count }}</td>
+              <td class="text-end">₹{{ data.total_requested|floatformat:2|intcomma }}</td>
+              <td class="text-end fw-bold text-success">₹{{ data.total_approved|floatformat:2|intcomma }}</td>
+              <td class="text-end">
+                {% if data.total_actual %}
+                  ₹{{ data.total_actual|floatformat:2|intcomma }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                {% if data.total_actual %}
+                  {% if data.total_actual <= data.total_approved %}
+                    <span class="diff-pos">+₹{{ data.total_approved|floatformat:2|intcomma }}</span>
+                  {% else %}
+                    <span class="diff-neg">-₹{{ data.total_actual|floatformat:2|intcomma }}</span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- DETAILED TABLE -->
+  <div class="card report-card">
+    <div class="section-head d-flex justify-content-between align-items-center">
+      <span><i class="fas fa-table me-2"></i>Detailed Form-wise Report</span>
+      <span class="badge bg-light text-dark">{{ total_count }} records</span>
+    </div>
+    <div class="card-body p-0">
+      {% if rows %}
+      <div class="table-responsive">
+        <table class="table table-hover table-bordered table-sm mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th class="text-center align-middle">Form No.</th>
+              <th class="text-center align-middle">Subject</th>
+              <th class="text-center align-middle">Approved Date</th>
+              <th class="text-center align-middle">Requested (₹ INR)</th>
+              <th class="text-center align-middle">Approved (₹ INR)</th>
+              <th class="text-center align-middle">Actual Spent (₹ INR)</th>
+              <th class="text-center align-middle">Difference (₹ INR)</th>
+              <th class="text-center align-middle">Completion of Work %</th>
+              {% if can_enter_actual or can_enter_work_completion %}
+                  <th class="no-print text-center align-middle">Action</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr id="form-{{ row.form.id }}" class="{% if row.actual_amount is None %}no-actual{% endif %}">
+              <td class="text-center align-middle">
+                <a href="{% url 'form_detail' row.form.id %}" target="_blank" class="text-decoration-none fw-bold text-primary">
+                  {{ row.form_number }}
+                </a>
+              </td>
+              <td class="align-middle small">{{ row.subject|truncatechars:40 }}</td>
+              <td class="text-center align-middle small">
+                {% if row.approved_date %}
+                  {{ row.approved_date|date:"d-m-Y" }}
+                  <br><span class="text-muted">{{ row.approved_date|date:"H:i A" }}</span>
+                {% else %}—{% endif %}
+              </td>
+
+              <td class="text-end align-middle small">
+                  {% if row.form.currency_code == 'INR' %}
+                      ₹{{ row.requested_amount|floatformat:2|intcomma }}
+                  {% else %}
+                      {{ row.form.currency_symbol }}{{ row.requested_amount|floatformat:2 }}
+                  {% endif %}
+              </td>
+
+              <td class="text-end  align-middle fw-bold text-success">
+                  {% if row.form.currency_code == 'INR' %}
+                      ₹{{ row.approved_amount|floatformat:2|intcomma }}
+                  {% else %}
+                      {{ row.form.currency_symbol }}{{ row.approved_amount|floatformat:2 }}
+                  {% endif %}
+              </td>
+
+
+              <!-- Actual Amount -->
+              <td class="text-end align-middle">
+                {% if row.actual_amount is not None %}
+                  <span class="fw-bold text-primary">₹{{ row.actual_amount|floatformat:2|intcomma }}</span>
+                  {% if row.actual_exp_obj and row.actual_exp_obj.remarks %}
+                    <br><small class="text-muted"><i class="fas fa-comment-dots"></i> {{ row.actual_exp_obj.remarks|truncatechars:28 }}</small>
+                  {% endif %}
+                {% else %}
+                  <span class="badge bg-warning text-dark"
+                  style="font-size:0.7rem;">Not entered</span>
+                {% endif %}
+              </td>
+
+              <!-- Difference -->
+              <td class="text-end align-middle">
+                {% if row.difference is not None %}
+                  {% if row.difference > 0 %}
+                    <span class="diff-pos">+₹{{ row.difference|floatformat:2|intcomma }}</span>
+                    <br><small class="text-success"
+                    style="font-size:0.7rem;">Saving</small>
+                  {% elif row.difference < 0 %}
+                    <span class="diff-neg">₹{{ row.difference|floatformat:2|intcomma }}</span>
+                    <br><small class="text-danger" style="font-size:0.7rem;">Overrun</small>
+                  {% else %}
+                    <span class="diff-zero">₹0.00</span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+
+              <!-- Completion of Work % -->
+              <td class="text-center align-middle">
+                {% if row.actual_exp_obj and row.actual_exp_obj.work_completion_percent is not None %}
+                  <div class="d-flex flex-column align-items-center">
+                    <span class="fw-bold {% if row.actual_exp_obj.work_completion_percent >= 100 %}text-success{% elif row.actual_exp_obj.work_completion_percent >= 50 %}text-primary{% else %}text-warning{% endif %}">
+                      {{ row.actual_exp_obj.work_completion_percent|floatformat:0 }}%
+                    </span>
+                    <div class="progress mt-1" style="width:50px; height:6px;">
+                      <div class="progress-bar
+                        {% if row.actual_exp_obj.work_completion_percent >= 100 %}bg-success
+                        {% elif row.actual_exp_obj.work_completion_percent >= 50 %}bg-primary
+                        {% else %}bg-warning{% endif %}"
+                        role="progressbar" style="width:{{ row.actual_exp_obj.work_completion_percent|floatformat:0 }}%">
+                      </div>
+                    </div>
+                  </div>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+              </td>
+
+              <!-- Action Button -->
+              {% if can_enter_actual or can_enter_work_completion %}
+                <td class="no-print text-center align-middle">
+                    <button class="btn btn-sm {% if row.actual_amount is not None or row.actual_exp_obj and row.actual_exp_obj.work_completion_percent is not None %}btn-outline-secondary{% else %}btn-outline-primary{% endif %}"
+                            data-bs-toggle="modal"
+                            data-bs-target="#actualModal{{ row.form.id }}">
+                        {% if row.actual_amount is not None or row.actual_exp_obj and row.actual_exp_obj.work_completion_percent is not None %}
+                            <i class="fas fa-edit"></i>
+                        {% else %}
+                            <i class="fas fa-plus"></i>
+                        {% endif %}
+                    </button>
+                </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ALL MODALS MOVED OUTSIDE THE TABLE - This fixes flickering -->
+  {% for row in rows %}
+    <div class="modal fade" id="actualModal{{ row.form.id }}" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <form id="actualForm{{ row.form.id }}" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="form_id" value="{{ row.form.id }}">
+
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title">
+              {% if can_enter_actual and can_enter_work_completion %}
+                Actual Amount & Work Completion — {{ row.form_number }}
+              {% elif can_enter_actual %}
+                Actual Amount — {{ row.form_number }}
+              {% else %}
+                Work Completion — {{ row.form_number }}
+              {% endif %}
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+
+          <div class="modal-body">
+            <div class="alert alert-info small">
+              <strong>{{ row.center_name|default:row.dept_name }}</strong> | {{ row.subject|truncatechars:60 }}
+              <br><i class="fas fa-check-circle text-success"></i>
+              Approved Amount: ₹{{ row.approved_amount|floatformat:2|intcomma }}
+            </div>
+
+            {% if can_enter_actual %}
+            <div class="mb-3">
+              <label class="form-label fw-bold">Enter actual amount spent (₹) <span class="text-danger">*</span></label>
+              <input type="number" name="actual_amount" class="form-control" step="0.01" min="0" required
+                     value="{% if row.actual_amount %}{{ row.actual_amount|floatformat:2|intcomma }}{% endif %}">
+            </div>
+            {% endif %}
+
+            {% if can_enter_work_completion %}
+            <div class="mb-3">
+              <label class="form-label fw-bold">
+                <i class="fas fa-tasks me-1 text-primary"></i>Completion of Work %
+              </label>
+              <div class="input-group">
+                <input type="number" name="work_completion_percent" class="form-control"
+                       step="0.01" min="0" max="100" placeholder="e.g. 75"
+                       value="{% if row.actual_exp_obj and row.actual_exp_obj.work_completion_percent is not None %}{{ row.actual_exp_obj.work_completion_percent|floatformat:2|intcomma }}{% endif %}">
+                <span class="input-group-text fw-bold">%</span>
+              </div>
+              <small class="text-muted">Enter 0–100. Leave blank if not applicable.</small>
+            </div>
+            {% endif %}
+
+            {# ✅ Remarks always shown regardless of permission combination #}
+            <div class="mb-3">
+              <label class="form-label fw-bold">Remarks (optional)</label>
+              <textarea name="remarks" class="form-control" rows="3"
+                        placeholder="e.g. Extra work done, vendor invoice notes...">{% if row.actual_exp_obj %}{{ row.actual_exp_obj.remarks }}{% endif %}</textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-success" id="saveBtn{{ row.form.id }}">
+              <i class="fas fa-save"></i> Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+    <nav aria-label="Page navigation" class="mt-4 d-print-none">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page=1{% if request.GET.urlencode %}&{{ request.GET.urlencode|cut:'page=' }}{% endif %}">&laquo; First</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode|cut:'page=' }}{% endif %}">Previous</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode|cut:'page=' }}{% endif %}">Next</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.urlencode %}&{{ request.GET.urlencode|cut:'page=' }}{% endif %}">Last &raquo;</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[id^="saveBtn"]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const formId = this.id.replace('saveBtn', '');
+            const form = document.getElementById('actualForm' + formId);
+            const formData = new FormData(form);
+
+            const originalText = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+            this.disabled = true;
+
+            fetch("{% url 'save_actual_expenditure' 0 %}".replace('0', formId), {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('actualModal' + formId)).hide();
+                    location.reload();
+                } else {
+                    alert(data.error || 'Failed to save');
+                }
+            })
+            .catch(() => alert('Network error'))
+            .finally(() => {
+                this.innerHTML = originalText;
+                this.disabled = false;
+            });
+        });
+    });
+});
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        function updatePrintTime() {
+            const now = new Date();
+            // ✅ Format matching your specific need
+            const fullString = now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) + " " + 
+                               now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const timeSpan = document.getElementById('print-local-time');
+            if (timeSpan) { timeSpan.textContent = fullString; }
+        }
+        updatePrintTime();
+        window.onbeforeprint = updatePrintTime; // ✅ Ensure it updates exactly when printing
+    });
+</script>
+{% endblock %}

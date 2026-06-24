@@ -1,0 +1,6 @@
+id,event_type,email_center_accountant,email_center,email_center_sant,email_prabhari_sant,email_zonal_head,email_department,email_dept_leader_sant,email_dept_sant,email_hod,email_mk_haribhakt,email_mk_sant,email_secretary,email_end_user,wa_center_accountant,wa_center,wa_center_sant,wa_prabhari_sant,wa_zonal_head,wa_department,wa_dept_leader_sant,wa_dept_sant,wa_hod,wa_mk_haribhakt,wa_mk_sant,wa_secretary,wa_end_user,sms_center_accountant,sms_center,sms_center_sant,sms_prabhari_sant,sms_zonal_head,sms_department,sms_dept_leader_sant,sms_dept_sant,sms_hod,sms_mk_haribhakt,sms_mk_sant,sms_secretary,sms_end_user
+2,FRM-01,0,1,1,1,1,1,1,1,1,1,1,1,0,0,1,0,0,1,1,0,0,1,1,1,1,0,0,1,1,1,0,1,1,1,1,1,1,1,0
+6,REG-03,0,1,1,1,0,1,1,1,1,0,1,1,0,0,1,0,0,0,1,0,0,1,1,0,1,0,0,0,1,1,0,1,1,1,1,1,0,1,0
+3,WKF-02,0,1,1,1,0,1,1,1,1,1,1,1,0,0,0,0,0,0,1,0,0,1,1,0,1,0,0,1,1,1,0,1,1,1,1,1,1,1,0
+4,WKF-03,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,0,0,1,1,0,0,1,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,0
+5,WKF-06,0,1,1,1,1,1,1,1,1,1,1,1,0,1,0,0,0,1,1,0,0,1,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,0

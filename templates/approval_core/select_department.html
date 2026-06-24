@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Select Active Department - SMVS Approval{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h4 class="card-title text-center mb-3" style="color: var(--primary-color);">
+                    <i class="fas fa-building-shield"></i> Select Department Workspace
+                </h4>
+                <p class="text-muted text-center small">Your profile is mapped to multiple departments. Please select the workspace you are creating this request for:</p>
+                
+                <form method="post" action="{% url 'initialize_form' %}">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label for="selected_department" class="form-label fw-bold">Active Department</label>
+                        <select class="form-select" id="selected_department" name="selected_department" required>
+                            {% for dept in assigned_departments %}
+                                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2">
+                        Open Creation Workspace <i class="fas fa-arrow-right ms-1"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

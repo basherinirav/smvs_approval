@@ -1,0 +1,272 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<style>
+    .sync-card {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 24px;
+        max-width: 900px;
+        margin: 30px auto;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .submit-btn {
+        background: #16a34a;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 4px;
+        font-weight: 700;
+        cursor: pointer;
+        width: 100%;
+        margin-top: 15px;
+        transition: background 0.2s;
+        font-size: 14px;
+    }
+    .submit-btn:hover { background: #15803d; }
+    .submit-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+    
+    /* 🟢 REALTIME REPORTING GRID STYLES */
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 25px;
+        font-size: 13px;
+        text-align: left;
+    }
+    .report-table th {
+        background-color: #f1f5f9;
+        color: #334155;
+        font-weight: 600;
+        padding: 12px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .report-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e2e8f0;
+        vertical-align: middle;
+    }
+    
+    /* PROGRESS BAR TRACKERS */
+    .progress-container {
+        width: 100%;
+        background-color: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 4px;
+        display: none;
+    }
+    .progress-bar {
+        width: 0%;
+        height: 6px;
+        background-color: #3b82f6;
+        transition: width 0.1s ease;
+    }
+    
+    /* STATUS PILL INDICATORS */
+    .status-pill {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .status-waiting { background-color: #f1f5f9; color: #64748b; }
+    .status-processing { background-color: #dbeafe; color: #1e40af; }
+    .status-success { background-color: #dcfce7; color: #166534; }
+    .status-error { background-color: #fee2e2; color: #991b1b; }
+    
+    .error-remark {
+        color: #dc2626;
+        font-size: 12px;
+        font-family: monospace;
+        margin-top: 4px;
+        display: block;
+        word-break: break-all;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sync-card">
+    <h1 style="margin-top:0; font-size: 20px; display: flex; align-items: center; gap: 10px;">
+        📦 Complete System Archive Sync Panel
+    </h1>
+    <p style="color: #64748b; font-size: 13px; line-height: 1.5;">
+        Upload your master compressed zip file containing the CSV/XLSX spreadsheets. The framework will extract files inside the browser and execute cascading backend updates in real time.
+    </p>
+
+    <div style="margin-top: 20px;">
+        <div style="border: 2px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 6px; background: #f8fafc;">
+            <input type="file" id="zipFileInput" accept=".zip" required>
+        </div>
+        <button type="button" id="startSyncBtn" class="submit-btn">⚡ Execute One-Click Realtime System Restoration</button>
+    </div>
+
+    <table class="report-table" id="syncReportTable" style="display: none;">
+        <thead>
+            <tr>
+                <th style="width: 20%;">Menu</th>
+                <th style="width: 35%;">Uploaded File Name</th>
+                <th style="width: 45%;">Status & Progress</th>
+            </tr>
+        </thead>
+        <tbody id="syncReportBody">
+            </tbody>
+    </table>
+</div>
+
+<script>
+document.getElementById('startSyncBtn').addEventListener('click', async function() {
+    const fileInput = document.getElementById('zipFileInput');
+    if (!fileInput.files.length) {
+        alert("Please select a compressed master .zip file first.");
+        return;
+    }
+
+    const startBtn = document.getElementById('startSyncBtn');
+    const file = fileInput.files[0];
+    startBtn.disabled = true;
+    
+    // Define explicit structural cascading execution hierarchy terms
+    const importSequence = [
+        { key: 'Country', names: ['country', 'countries'] },
+        { key: 'ApprovalLevel', names: ['approvallevel', 'approval_level', 'level'] },
+        { key: 'PostMaster', names: ['postmaster', 'post_master', 'post', 'posts'] },
+        { key: 'Zone', names: ['zone', 'zones'] },
+        { key: 'Center', names: ['center', 'centers'] },
+        { key: 'Department', names: ['department', 'departments'] },
+        { key: 'User', names: ['user-setting', 'users', 'auth_user'] },
+        { key: 'UserProfile', names: ['userprofile', 'user_profile', 'profile'] },
+        { key: 'UserRole', names: ['userrole', 'user_role', 'roles'] },
+        { key: 'UserWorkspace', names: ['userworkspace', 'user_workspace', 'workspace'] },
+        { key: 'ApprovalLevelUser', names: ['approvalleveluser', 'level_user', 'assignment'] },
+        { key: 'RegistrationConfig', names: ['registration', 'workflowconfig'] },
+        { key: 'EmailTemplate', names: ['emailnotificationtemplate', 'email_template'] },
+        { key: 'SMSTemplate', names: ['smstemplate', 'sms_template'] },
+        { key: 'WhatsAppTemplate', names: ['whatsappnotificationtemplate', 'whatsapp_template'] },
+        { key: 'EmailMapping', names: ['emailmapping', 'email_mappings'] },
+        { key: 'ApprovalRule', names: ['approvalrule', 'approval_rule', 'rules'] },
+        { key: 'RuleSequence', names: ['ruleapprovalsequence', 'sequences', 'sequence'] },
+        { key: 'RoutingMatrix', names: ['notificationroutingmatrix', 'routing_matrix'] }
+    ];
+
+    try {
+        const table = document.getElementById('syncReportTable');
+        const tbody = document.getElementById('syncReportBody');
+        tbody.innerHTML = '';
+        table.style.display = 'table';
+
+        // 1. Read and Parse Zip Structure in Memory
+        const zip = await JSZip.loadAsync(file);
+        const archiveFiles = Object.keys(zip.files);
+
+        // 2. Initialize UI table layout blocks for the defined sequence matches
+        const activeTasks = [];
+        importSequence.forEach((step, index) => {
+            let matchedFilename = "-";
+            let zipFileObject = null;
+
+            for (let name of archiveFiles) {
+                if (name.includes('/') && !name.split('/').pop()) continue;
+                let cleanName = name.split('/').pop().toLowerCase();
+                if (step.names.some(term => cleanName.includes(term)) && (cleanName.endsWith('.csv') || cleanName.endsWith('.xlsx'))) {
+                    matchedFilename = name.split('/').pop();
+                    zipFileObject = zip.files[name];
+                    break;
+                }
+            }
+
+            // Create structural row markup matching the format requirements
+            const rowId = `row_${index}`;
+            const tr = document.createElement('tr');
+            tr.id = rowId;
+            tr.innerHTML = `
+                <td><strong>${step.key}</strong></td>
+                <td><span style="color: #64748b;">${matchedFilename}</span></td>
+                <td>
+                    <div id="status_${index}" class="status-pill status-waiting">Waiting</div>
+                    <div id="progress_container_${index}" class="progress-container"><div id="progress_${index}" class="progress-bar"></div></div>
+                    <span id="remark_${index}"></span>
+                </td>
+            `;
+            tbody.appendChild(tr);
+
+            if (zipFileObject) {
+                activeTasks.push({ index, key: step.key, filename: matchedFilename, fileObj: zipFileObject });
+            } else {
+                document.getElementById(`status_${index}`).className = "status-pill status-error";
+                document.getElementById(`status_${index}`).innerText = "Skipped";
+                document.getElementById(`remark_${index}`).className = "error-remark";
+                document.getElementById(`remark_${index}`).innerText = "⚠️ File missing inside archive package.";
+            }
+        });
+
+        // Get CSRF Token safely
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '';
+
+        // 3. Process the files sequentially to preserve foreign key order
+        for (let task of activeTasks) {
+            const statusEl = document.getElementById(`status_${task.index}`);
+            const progressContainer = document.getElementById(`progress_container_${task.index}`);
+            const progressBar = document.getElementById(`progress_${task.index}`);
+            const remarkEl = document.getElementById(`remark_${task.index}`);
+
+            statusEl.className = "status-pill status-processing";
+            statusEl.innerText = "Importing";
+            progressContainer.style.display = "block";
+            progressBar.style.width = "40%"; // Start indicator block animation
+
+            // Unpack binary contents to Blob arrays inside client context
+            const fileData = await task.fileObj.async("blob");
+            const formData = new FormData();
+            formData.append('file', fileData, task.filename);
+            formData.append('menu_key', task.key);
+
+            try {
+                // Submit raw payloads directly to the new split sync route
+                const response = await fetch('/system/master-file-stream-import/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrftoken },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                progressBar.style.width = "100%";
+
+                if (response.ok && result.success) {
+                    statusEl.className = "status-pill status-success";
+                    statusEl.innerText = "Successfully uploaded";
+                    remarkEl.style.color = "#16a34a";
+                    remarkEl.style.fontSize = "12px";
+                    remarkEl.innerText = ` ✓ processed ${result.processed_count} rows cleanly.`;
+                } else {
+                    statusEl.className = "status-pill status-error";
+                    statusEl.innerText = "Error";
+                    remarkEl.className = "error-remark";
+                    remarkEl.innerText = `❌ ${result.error || 'Validation error encountered.'}`;
+                }
+            } catch (err) {
+                statusEl.className = "status-pill status-error";
+                statusEl.innerText = "Error";
+                remarkEl.className = "error-remark";
+                remarkEl.innerText = `❌ Connection drop: ${err.message}`;
+            }
+        }
+        
+        alert("🏁 Realtime System Restorations Complete!");
+    } catch (error) {
+        alert("❌ Crash reading archive file package: " + error.message);
+    } finally {
+        startBtn.disabled = false;
+    }
+});
+</script>
+{% endblock %}

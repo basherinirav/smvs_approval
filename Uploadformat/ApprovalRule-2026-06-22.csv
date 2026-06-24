@@ -1,0 +1,8 @@
+id,rule_name,rule_type,min_amount,max_amount,applicable_departments,approval_levels,applicable_country,chain_type,priority,is_active
+7,Dept >=5 Nirman,combined,"500,000.00","9,999,999,999.00",NRM,"1,2,3,4,5,6",,standard,0,1
+6,Dept >2.5,amount,"250,001.00","9,999,999,999.00",,"1,2,4,5,6",,standard,0,1
+5,Dept >.50 <2.5,amount,"50,000.00","250,000.00",,"1,2,4,5",,standard,0,1
+4,Center - Dept,combined,"500,000.00","9,999,999,999.00",NRM,"1,2,3,4,5,6",,standard,0,1
+3,Center >2.5,amount,"250,001.00","9,999,999,999.00",,"1,2,4,5,6",,standard,0,1
+2,Center >1 to <=2.5,amount,"100,001.00","250,000.00",,"1,2,4,5",,standard,0,1
+1,Center >0.50 to <=1,amount,"50,000.00","100,000.00",,"1,2,4",,standard,0,1

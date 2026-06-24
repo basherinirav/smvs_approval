@@ -1,0 +1,2235 @@
+{% extends 'base.html' %}
+
+{% load humanize %}
+{% load l10n %}
+{% block title %}{{ form.form_number }} - SMVS Approval System{% endblock %}
+
+{% block content %}
+
+<style>
+/* Base tab style */
+.nav-tabs .nav-link {
+    color: #212529 !important;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    margin-right: 5px;
+    border-radius: 6px 6px 0 0;
+    font-weight: 600;
+}
+
+.nav-tabs .nav-link:hover {
+    background-color: #e9ecef;
+    color: #000;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: #0d6efd;
+    color: #fff !important;
+    border-color: #0d6efd;
+}
+
+/* Styling for the processing state */
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+/* Optional: Add a subtle pulse animation to the processing button */
+.btn .spinner-border {
+    vertical-align: middle;
+    margin-top: -3px;
+}
+
+/* Styling to make Select2 height match Bootstrap 5 inputs */
+    .select2-container--default .select2-selection--single {
+        height: 38px;
+        padding-top: 5px;
+        border: 1px solid #dee2e6;
+    }
+
+/* Improve Select2 mobile tap targets */
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 36px;
+    padding-left: 12px;
+}
+.select2-results__option {
+    padding: 10px 12px; /* Bigger tap area for fingers */
+}
+
+/* Steady high-contrast style for revision remarks */
+.remark-steady {
+    color: #856404 !important; /* Deep contrast brown-yellow */
+    background-color: #fff3cd !important; /* Solid light yellow background */
+    border: 1px solid #ffeeba !important;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Mobile Improvements */
+@media (max-width: 768px) {
+    .form-header {
+        padding: 15px 10px;
+    }
+    
+    .nav-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 5px;
+    }
+    
+    .nav-tabs .nav-link {
+        font-size: 0.9rem;
+        padding: 8px 12px;
+        min-width: 80px;
+        text-align: center;
+    }
+    
+    .card {
+        margin-bottom: 15px;
+    }
+    
+    .alert {
+        margin: 10px 0;
+        font-size: 0.95rem;
+    }
+    
+    .btn-lg {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+}
+
+/* Better contrast for top bar on mobile */
+.navbar {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+</style>
+
+<div class="mt-4">
+    <!-- Messages -->
+
+    <div class="form-header">
+        <div class="row">
+            <div class="col-md-8">
+                <h2 class="form-number">{{ form.form_number }}</h2>
+                <p>{{ form.subject }}</p>
+            </div>
+            <div class="col-md-4 text-end">
+                {% if form.status == 'approved' %}
+                    <span class="badge badge-approved badge-status" style="font-size: 1.1rem;">APPROVED</span>
+                {% elif form.status == 'rejected' %}
+                    <span class="badge badge-rejected badge-status" style="font-size: 1.1rem;">REJECTED</span>
+                {% elif form.status == 'revision_pending' %}
+                    <span class="badge badge-revision badge-status" style="font-size: 1.1rem;">REVISION PENDING</span>
+                {% elif form.status == 'initiated' %}
+                    <span class="badge badge-initiated badge-status" style="font-size: 1.1rem;">DRAFT</span>
+                {% else %}
+                    <span class="badge badge-pending badge-status" style="font-size: 1.1rem;">IN PROGRESS</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab">
+                <i class="fas fa-info-circle"></i> Details
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents" type="button" role="tab">
+                <i class="fas fa-file"></i> Documents ({{ documents|length }})
+            </button>
+        </li>
+        {% if not is_delegated_to_me and request.user.approval_role.role != "third_party" %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="workflow-tab" data-bs-toggle="tab" data-bs-target="#workflow" type="button" role="tab">
+                    <i class="fas fa-stream"></i> Approval Flow
+                </button>
+            </li>
+        {% endif %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="comments-tab" data-bs-toggle="tab" data-bs-target="#comments" type="button" role="tab">
+                <i class="fas fa-comments"></i> Comments
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+
+        <!-- Details Tab -->
+        <div class="tab-pane fade show active" id="details" role="tabpanel">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-header" style="background-color: var(--primary-color); color: white;">
+                            <strong>Form Information</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <strong>Form Number:</strong>
+                                    <p>{{ form.form_number }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Source:</strong>
+                                    <p>  
+                                        {% if form.center %}
+                                            {{ form.center.name }} <span class="text-primary">(Center Initiated)</span>                                        
+                                        {% elif form.department %}
+                                            {{ form.department.name }} <span class="text-success">(Department Initiated)</span>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>                                        
+                                        {% endif %}
+                                    </p>
+
+                                    {% if form.selected_center %}
+                                    <!-- ✅ Selected Center — shown clearly BELOW source, visible to ALL approvers -->
+                                    <div class="d-flex align-items-center gap-2 mt-1 mb-1">
+                                        <span class="text-muted small">For Center:</span>
+                                        <span class="badge text-dark fw-semibold px-2 py-1"
+                                              style="background:#cff4fc; border:1px solid #0dcaf0; font-size:0.85rem;">
+                                            <i class="fas fa-building me-1 text-info"></i>
+                                            {{ form.selected_center.name }}
+                                            {% if form.selected_center.city %}
+                                                &mdash; {{ form.selected_center.city }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    {% endif %}                                                                                    
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <strong>Requested Amount:</strong>
+
+                                    {% if form.currency_code != 'INR' and form.amount_inr %}
+                                    <!-- Foreign currency form — show both -->
+                                    <div class="mt-1">
+                                        <span class="badge px-3 py-2"
+                                              style="font-size:1.05rem; background:#e8f4fd; border:1px solid #0d6efd;
+                                                    color:#0d6efd; border-radius:8px;">
+                                            {{ form.currency_symbol }} {{ form.amount|intcomma }}
+                                        </span>
+                                        <div class="mt-1 text-muted small">
+                                            <i class="fas fa-exchange-alt me-1"></i>
+                                            ≈ <strong class="text-dark">₹ {{ form.amount_inr|intcomma }}</strong>
+                                            <span class="ms-1">
+                                                (1 {{ form.currency_code }} = ₹{{ form.exchange_rate_used }}
+                                                at submission)
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {% else %}
+
+                                    <!-- Normal INR form -->  
+                                    <span class="badge bg-light text-dark px-3 py-2"
+                                          style="font-size: 1.1rem; border: 1px solid #ddd; border-radius: 8px;">
+                                        ₹ {{ form.amount|intcomma }}
+                                    </span>
+                                    {% endif %} 
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center mt-0" style="gap: 10px;">
+                                        <strong>Status & Approved Amount:</strong>
+
+                                        <!-- STATUS -->
+                                        {% if form.status == 'approved' %}
+                                            <span class="badge badge-approved px-3 py-2" style="font-size: 1rem; border-radius: 20px;">Approved</span>
+                                        {% elif form.status == 'rejected' %}
+                                            <span class="badge badge-rejected px-3 py-2" style="font-size: 1rem; border-radius: 20px;">Rejected</span>
+                                        {% elif form.status == 'revision_pending' %}
+                                            <span class="badge badge-revision px-3 py-2" style="font-size: 1rem; border-radius: 20px;">Revision Pending</span>
+                                        {% elif form.status == 'initiated' %}
+                                            <span class="badge badge-initiated px-3 py-2" style="font-size: 1rem; border-radius: 20px;">Draft</span>
+                                        {% else %}
+                                            <span class="badge badge-pending px-3 py-2" style="font-size: 1rem; border-radius: 20px;">In Progress</span>
+                                        {% endif %}
+
+                                        <!-- APPROVED AMOUNT -->
+                                        {% if form.status == "approved" %}
+                                            {% if form.currency_code != 'INR' and form.approved_amount_local %}
+                                                <span class="amount-badge fw-bold fs-5
+                                                    {% if form.approved_amount < form.amount_inr %}
+                                                        text-danger border border-danger bg-light
+                                                    {% elif form.approved_amount > form.amount_inr %}
+                                                        text-primary border border-primary bg-light
+                                                    {% else %}
+                                                        text-success border border-success bg-light
+                                                    {% endif %}
+                                                " title="₹ {{ form.approved_amount|intcomma }} INR">
+                                                    {{ form.currency_symbol }}{{ form.approved_amount_local|intcomma }}
+                                                    <small class="text-muted fw-normal" style="font-size:0.72rem;">
+                                                        (≈ ₹{{ form.approved_amount|intcomma }})
+                                                    </small>
+                                                </span>
+                                            {% else %}
+                                                <span class="amount-badge fw-bold fs-5
+                                                    {% if form.approved_amount < form.amount %}
+                                                        text-danger border border-danger bg-light
+                                                    {% elif form.approved_amount > form.amount %}
+                                                        text-primary border border-primary bg-light
+                                                    {% else %}
+                                                        text-success border border-success bg-light
+                                                    {% endif %}
+                                                ">
+                                                    ₹{{ form.approved_amount|floatformat:2|intcomma }}
+                                                </span>
+                                            {% endif %}
+                                        {% endif %} 
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="mb-3">
+                                <strong>Description:</strong>
+                                <p class="mt-2" style="white-space: pre-wrap;">{{ form.description }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-header" style="background-color: var(--primary-color); color: white;">
+                            <strong>Timeline</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <strong>Created:</strong>
+                                <p class="text-muted">{{ form.created_at|date:"d-m-Y H:i" }}</p>
+                            </div>
+                            {% if form.submitted_at %}
+                                <div class="mb-2">
+                                    <strong>Submitted:</strong>
+                                    <p class="text-muted">{{ form.submitted_at|date:"d-m-Y H:i" }}</p>
+                                </div>
+                            {% endif %}
+                            {% if form.approved_at %}
+                                <div class="mb-2">
+                                    <strong>Approved:</strong>
+                                    <p class="text-muted">{{ form.approved_at|date:"d-m-Y H:i" }}</p>
+                                </div>
+                            {% endif %}
+                            {% if form.rejected_at %}
+                                <div class="mb-2">
+                                    <strong>Rejected:</strong>
+                                    <p class="text-muted">{{ form.rejected_at|date:"d-m-Y H:i" }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Draft Mode Warning + Submit Button -->
+                    {% if form.submitted_by == request.user and form.status == 'initiated' or form.submitted_by == request.user and form.status == 'revision_pending' %}
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            <strong>This form is currently in Draft mode</strong><br>
+                            Please review all details and documents before submitting for approval process.
+                        </div>
+
+                        <div class="d-grid gap-2 mt-3"> 
+                            <a href="{% url 'edit_form' form.id %}" class="btn btn-outline-primary btn-lg">
+                                <i class="fas fa-edit"></i> Edit Amount / Description                        
+                            </a>
+
+                            <form method="post" action="{% url 'submit_form' form.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-lg w-100">
+                                    {% if form.status == 'revision_pending' %}
+                                        <i class="fas fa-redo"></i> Re-submit Application
+                                    {% else %}
+                                        <i class="fas fa-paper-plane"></i> Submit for Approval
+                                    {% endif %}
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Approval Workflow Tab -->
+        {% if not is_delegated_to_me %}
+        <div class="tab-pane fade" id="workflow" role="tabpanel">
+            <div class="card">
+                <div class="card-header" style="background-color: var(--primary-color); color: white;">
+                    <strong>Approval Workflow</strong>
+                </div>
+                <div class="card-body p-4">
+                    {% if total_levels %}
+                        <div class="alert alert-info mb-4">
+                            <strong>Progress:</strong> Out of {{ total_levels }} approval levels required,
+                            {{ completed_levels }} completed, {{ pending_levels }} pending
+                        </div>
+                    {% endif %}
+                    {% if actions %}
+                        <div class="timeline" style="position: relative; padding-left: 35px;">
+                            {% for action in actions %}
+                                {# Hide internal delegation actions from End User #}
+                                {% if is_end_user and action.action_type == 'delegated' or is_end_user and action.action_type == 'delegation_returned' or is_end_user and action.action_type == 'approved_by_external' or is_end_user and action.action_type == 'approved_by_internal' or is_end_user and action.action_type == 'rejected_by_external' or is_end_user and action.action_type == 'external_delegated' or is_end_user and action.action_type == 'external_delegation_reply' or is_end_user and action.action_type == 'rejected_by_internal' %} 
+                                    {# Skip this entry for end users #} 
+                                {% else %}
+                                    <div class="timeline-item mb-4" style="position: relative;">
+                                        <!-- Vertical line -->
+                                        <div style="position: absolute; left: -10px; top: 8px; bottom: -5px; width: 3px; background: #dee2e6;"></div>
+                                      
+                                        <!-- Dot -->
+                                        <div style="position: absolute; left: -19px; width: 18px; height: 18px; background: #0d6efd; border-radius: 50%; border: 3px solid white; z-index: 1;"></div>
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div style="flex: 1;">
+                                                <strong style="font-size: 1.05rem; color: #2c3e50;">
+                                                    {% if action.action_type == 'submitted' %}
+                                                        Submitted by
+                                                        {% if form.center %}
+                                                            {{ form.center.name }} Center
+                                                        {% elif form.department %}
+                                                            {{ form.department.name }}
+                                                        {% else %}
+                                                            {{ action.actor.get_full_name|default:action.actor.username }}
+                                                        {% endif %}                                          
+
+                                                    {% elif action.action_type == 'resubmitted' %}
+                                                        {# ✅ NEW CONDITION FOR RESUBMISSION #}
+                                                        Revision Resubmitted by
+                                                        {% if form.center %}
+                                                            {{ form.center.name }} Center
+                                                        {% elif form.department %}
+                                                            {{ form.department.name }}
+                                                        {% else %}
+                                                            {{ action.actor.get_full_name|default:action.actor.username }}
+                                                        {% endif %}
+
+                                                    {% elif action.action_type == 'delegated' %}
+                                                        Delegated to 3rd Party Verifier by 
+                                                        {{ action.approval_level.level_name|default:"Unknown" }}
+
+                                                    {% elif action.action_type == 'approved_by_external' %}
+                                                        ✅ 3rd Party Verified Successfully and returned to 
+                                                        {% if form.delegated_by %}{{ form.delegated_by.get_full_name|default:form.delegated_by.username }}{% else %}the delegator{% endif %}
+
+                                                    {% elif action.action_type == 'approved_by_internal' %}
+                                                        ✅ Internal 3rd Party Verified and returned to
+                                                        {% if form.delegated_by %}{{ form.delegated_by.get_full_name|default:form.delegated_by.username }}{% else %}the delegator{% endif %}
+
+                                                    {% elif action.action_type == 'rejected_by_external' %}
+                                                        ❌ External 3rd Party Rejected the form
+
+                                                    {% elif action.action_type == 'rejected_by_internal' %}
+                                                        ❌ Internal 3rd Party Rejected the form
+
+                                                    {% elif action.action_type == 'delegation_returned' %}
+                                                         Verified by 3rd Party and returned to {% if form.delegated_by %}{{ form.delegated_by.get_full_name|default:form.delegated_by.username }}{% else %}the delegator{% endif %}
+
+                                                    {% elif action.action_type == 'approved' %}
+                                                        {% if action.approval_level %}
+                                                            {% if 'operator' in action.approval_level.level_name|lower %}
+                                                                Documents Verified by {{ action.approval_level.level_name }}                                    
+                                                            {% else %}
+                                                                Approved by {{ action.approval_level.level_name }}
+                                                            {% endif %}
+                                                        {% else %}
+                                                            Approved
+                                                        {% endif %}
+                                                    {% else %}
+                                                        {{ action.get_action_type_display|default:action.action_type|title }}
+                                                    {% endif %}
+                                                </strong>
+                                               
+                                                <!-- Dynamic Contact Details -->
+                                                {% if action.actor %}
+                                                    <div class="mt-2 small text-muted">
+                                                        {% if not is_end_user %}
+                                                            By: <strong>{{ action.actor.get_full_name|default:action.actor.username }}</strong>
+                                                            {% if action.actor.email %}<br>Email: {{ action.actor.email }}{% endif %}
+                                                            {% if action.actor.user_profile.phone %}<br>Phone: {{ action.actor.user_profile.phone }}{% endif %}
+                                                        {% else %} 
+                                                            {% if action.approval_level %}
+                                                                                                                                                                {# ✅ Show full details for Operator and MK Sabhay to end users #}  
+                                                                {% if 'operator' in action.approval_level.level_name|lower or 'sabhay' in action.approval_level.level_name|lower %}
+                                                                    By: <strong>{{ action.actor.get_full_name|default:action.actor.username }}</strong> 
+                                                                    {% if action.actor.email %}<br>Email: {{ action.actor.email }}{% endif %}
+                                                                    {% if action.actor.user_profile.phone %}<br>Phone: {{ action.actor.user_profile.phone }}{% endif %}  
+                                                                {% else %}
+                                                                    <span class="text-info"><i class="fas fa-shield-alt me-1"></i>Verified at {{ action.approval_level.level_name }}</span>
+                                                                {% endif %}
+                                                            {% else %}
+                                                                By: <strong>{{ action.actor.get_full_name|default:action.actor.username }}</strong>
+                                                            {% endif %} 
+                                                        {% endif %}
+                                                    </div>
+                                                {% endif %}   
+
+                                                {% if not is_end_user and action.time_taken_display %}
+                                                    <div class="mt-1 small text-success fw-bold">
+                                                        ⏱ Time Taken: <span style="color:#28a745;">{{ action.time_taken_display }}</span>
+                                                    </div> 
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-end text-muted small ms-3" style="min-width: 130px;">
+                                                {{ action.created_at|date:"d-m-Y H:i" }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">No approval actions recorded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Documents Tab -->
+        <div class="tab-pane fade" id="documents" role="tabpanel">
+            <div class="card">
+                <div class="card-header" style="background-color: var(--primary-color); color: white;">
+                    <strong>Uploaded Documents* (Please upload all required documents in Single PDF File)</strong>
+                </div>
+                <div class="card-body">
+
+                    <!-- ✅ ADD THIS BLOCK HERE -->
+                    {% if has_unverified_docs %}
+                        <div class="alert alert-warning">
+                            ⚠️ Please verify all documents before approval
+                        </div>
+                    {% endif %}
+
+                    {% if can_upload %}
+                        <div class="alert {% if form.status == 'revision_pending' %}alert-warning{% else %}alert-info{% endif %} mb-4">
+                            {% if form.status == 'revision_pending' %}
+                                <strong><i class="fas fa-redo"></i> Revision Mode:</strong> 
+                                Please upload the corrected documents or additional files as requested by the approver.
+                            {% else %}
+                                <strong><i class="fas fa-info-circle"></i> Initial Submission:</strong> 
+                                Please upload all required documents in a <strong>Single PDF File</strong>.
+                            {% endif %}
+                        </div>
+
+
+                        <form id="uploadForm" method="post" enctype="multipart/form-data" action="{% url 'upload_document' form.id %}">
+                            {% csrf_token %}
+                          
+                            <div class="card border-info mb-3 bg-light shadow-sm">
+                                <div class="card-body py-2 px-3">
+                                    <h6 class="small text-danger fw-bold text-info mb-2">
+                                        <i class="fas fa-clipboard-check me-1"></i>
+                                        {% if form.status == 'revision_pending' %}
+                                            Revision Verification Checklist (Required)
+                                        {% else %}
+                                            Self-Verification Checklist (Required before upload)
+                                        {% endif %}
+                                    </h6>
+
+                                    <div class="row g-3 align-items-start">
+                                        {% if form.status == 'revision_pending' %}  
+                                            <div class="col-md-12">
+                                                <div class="form-check small">
+                                                    <input class="form-check-input user-checklist border-primary" type="checkbox"       
+                                                    id="user_o">
+                                                    <label class="form-check-label" for="user_o">
+                                                        I confirm that the <strong>Revised Documents/Supporting Docs</strong>   
+                                                        requested by the approver are attached.
+                                                    </label> 
+                                                </div>
+                                                <input type="checkbox" class="user-checklist d-none" checked id="user_f">
+                                                <input type="checkbox" class="user-checklist d-none" checked id="user_s"> 
+                                                <input type="checkbox" class="user-checklist d-none" checked id="user_m">
+                                                <input type="radio" class="user-radio-check d-none" checked name="prabhari_sign"
+                                                value="verified">  
+                                            </div>
+                                        {% else %}
+                                            <div class="col-md-4">
+                                                <div class="form-check small">   
+                                                    <input class="form-check-input user-checklist border-primary" type="checkbox" id="user_f">
+                                                    <label class="form-check-label" for="user_f">  
+                                                        Approval Form in <strong>Prescribed Format</strong>?
+                                                    </label> 
+                                                </div>
+                                                <div class="form-check small mt-1">   
+                                                    <input class="form-check-input user-checklist border-primary" type="checkbox" id="user_s">
+                                                    <label class="form-check-label" for="user_s">  
+                                                        All <strong>Signatures</strong> present and clear?
+                                                    </label> 
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-4 border-start border-end">
+                                                <div class="form-check small">   
+                                                    <input class="form-check-input user-checklist border-primary" type="checkbox" id="user_m">
+                                                    <label class="form-check-label" for="user_m">  
+                                                        <strong>MOM</strong> (Minutes of Meeting) attached?
+                                                    </label> 
+                                                </div>
+                                                <div class="form-check small mt-1">   
+                                                    <input class="form-check-input user-checklist border-primary" type="checkbox" id="user_o">
+                                                    <label class="form-check-label" for="user_o">  
+                                                        <strong>Supporting Docs</strong> (Plan/Quotation) attached?
+                                                    </label> 
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label class="small fw-bold d-block mb-1"><i class="fas fa-pen-nib me-1"></i> P. Prabhari Sant Sign location:</label>
+                                                <div class="form-check form-check-inline small"> 
+                                                    <input class="form-check-input user-radio-check border-primary" type="radio" name="prabhari_sign" value="form" id="psf_{{doc.id}}" required>
+                                                    <label class="form-check-label" for="psf_{{doc.id}}">In Form</label>  
+                                                </div>
+                                                <div class="form-check form-check-inline small">
+                                                    <input class="form-check-input user-radio-check border-primary" type="radio" name="prabhari_sign" value="email" id="pse_{{doc.id}}">  
+                                                    <label class="form-check-label" for="pse_{{doc.id}}">Email Attachment</label>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div> 
+                            </div>
+                            <div class="row mb-3"> 
+                                <div class="col-md-4">
+                                    <select name="document_type" class="form-control" required> 
+                                        {% if form.status == 'initiated' %} 
+                                            <option value="All Approval Documents">All Approval Documents in Single PDF File</option>
+                                        {% elif form.status == 'revision_pending' %} 
+                                            <option value="">-- Select Revision Document Type --</option>
+                                            <option value="Revised Form">Revised Approval Form</option> 
+                                            <option value="Revised Quotation">Revised Quotation</option> 
+                                            <option value="Additional Plan or Photos">Additional Plan or Photos</option> 
+                                            <option value="Clarification Doc">Clarification Doc</option>
+                                        {% else %}
+                                            <option value="Other">Other Document</option>
+                                        {% endif %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="file" name="file" id="userFileInput" class="form-control" accept=".pdf" required> 
+                                </div>
+                                <div class="col-md-2"> 
+                                    <button type="submit" id="btnUploadSubmit" class="btn btn-primary w-100 no-loader" disabled>
+                                        <i class="fas fa-upload"></i> Upload
+                                    </button>
+                                </div>   
+                            </div> 
+
+                            <div class="progress mt-2" style="display:none;" id="uploadProgressBar">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>  
+                            </div>
+                        </form>
+                    {% endif %}
+
+                    {% if documents %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-center">Type</th>
+                                        <th class="text-center">Uploaded By</th>
+                                        <th class="text-center">Uploaded At</th>
+                                        <th class="text-center">Document Verification Status</th>
+                                        <th class="text-center text-start ps-2">Action</th>
+                                        <th class="text-center" style="min-width: 300px;">Verification Checklist</th> 
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for doc in documents %}
+                                        <tr>
+                                            <td>
+                                                <i class="fas fa-file-pdf text-danger me-1"></i> 
+                                                {{ doc.document_type|default:"Document" }}
+                                            </td>
+                                            <td  class="text-center">{{ doc.uploaded_by.get_full_name|default:doc.uploaded_by.username }}</td>
+                                            <td class="text-center">{{ doc.uploaded_at|date:"d-m-Y H:i A" }}</td>
+                                            <td class="text-center">
+                                                {% if doc.is_verified %}
+                                                    <span class="badge bg-success"><i class="fas fa-check-circle"></i> ✔ Verified</span
+                                                    <div class="small text-muted">
+                                                        by {{ doc.verified_by }}<br>
+                                                        {{ doc.verified_at|date:"d-m-Y H:i" }}
+                                                    </div>
+                                                {% else %}
+                                                    <span class="badge bg-warning text-dark">Pending Verification</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex justify-content-center gap-2">
+                                                    <a href="{{ doc.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">                     
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </a>
+                                                    <a href="{{ doc.file.url }}" download class="btn btn-sm btn-outline-success"> 
+                                                        <i class="fas fa-download"></i>  
+                                                    </a>
+                                                </div> 
+                                            </td>
+
+                                            <td>
+                                                <!-- ✅ VERIFY CHECKBOX (ONLY FOR OPERATOR) -->
+                                                {% if doc.is_verified %}       
+                                                    <div class="alert alert-success p-2 mb-0 small shadow-sm">
+                                                        <div class="fw-bold mb-1"><i class="fas fa-user-check"></i> Verified by {{ doc.verified_by.get_full_name|default:doc.verified_by.username }}</div> 
+                                                        <hr class="my-1">
+                                                        <ul class="list-unstyled mb-0" style="font-size: 0.85rem;">
+                                                            <li>
+                                                                <i class="fas fa-check-circle text-success me-1"></i> 
+                                                                {% if "Revised" in doc.document_type or form.actions.all.first.action_type == "resubmitted" %}
+                                                                    Revised Checklist confirmed by MK Sabhya 
+                                                                {% else %}
+                                                                    Checklist confirmed by Operator
+                                                                {% endif %}  
+                                                            </li>
+
+                                                            {% if "Revised" not in doc.document_type %}
+                                                                <li>
+                                                                    <i class="fas fa-pen-nib text-primary me-1"></i> 
+                                                                    <strong>Sign:</strong>
+                                                                    {% if doc.prabhari_sign_location == 'form' %} 
+                                                                        In Form
+                                                                    {% else %} 
+                                                                        Email Attached
+                                                                    {% endif %}      
+                                                                </li>
+                                                            {% endif %}
+                                                        </ul>  
+                                                    </div>
+
+                                                {% elif request.user.approval_role.role == "operator" and "operator" in form.current_approval_level.level_name|lower %}
+                                                    <form method="post" action="{% url 'verify_document' doc.id %}" class="p-2 border rounded bg-light shadow-sm">
+                                                        {% csrf_token %}
+
+                                                        <h6 class="small fw-bold text-primary border-bottom pb-1 mb-2">Review End User Checklist</h6>                                                  
+                                                        <div class="alert alert-info py-1 px-2 small mb-2" style="font-size: 1rem;">
+                                                            <i class="fas fa-info-circle me-1"></i>
+                                                            User <strong>{{ doc.uploaded_by.username }}</strong>
+                                                            from
+                                                            {% if form.center %}
+                                                                <strong>{{ form.center.name }}</strong>
+                                                            {% elif form.department %}
+                                                                <strong>{{ form.department.name }}</strong>
+                                                            {% else %}
+                                                                <strong>Unknown Source</strong>  
+                                                            {% endif %}                                                        
+                                                            confirmed that all self-verification checklist are checked at their end.
+                                                        </div>
+
+                                                        <div class="form-check small mb-2">
+                                                            <input class="form-check-input border-primary" type="checkbox" id="master_confirm_{{doc.id}}" required>
+                                                            <label class="form-check-label fw-bold" for="master_confirm_{{doc.id}}">
+                                                                I verify and confirm the checklist provided by {{ doc.uploaded_by.get_full_name|default:doc.uploaded_by.username }}
+                                                                from 
+                                                                {% if form.center %}
+                                                                    <strong>{{ form.center.name }}</strong>
+                                                                {% elif form.department %}
+                                                                    <strong>{{ form.department.name }}</strong>
+                                                                {% else %}
+                                                                    <strong>Unknown Source</strong>  
+                                                                {% endif %}                                                                  
+                                                                is 100% correct.
+                                                            </label>                                                  
+                                                        </div> 
+
+                                                        <div class="text-end mb-2">
+                                                            <button type="button" class="btn btn-link btn-sm text-danger p-0 small text-decoration-none"
+                                                                    onclick="toggleDiscrepancy('{{doc.id}}')"> 
+                                                                <i class="fas fa-exclamation-triangle me-1"></i> Found an error click here?
+                                                            </button>  
+                                                        </div>
+
+                                                        <div id="discrepancy_box_{{doc.id}}" style="display: none;" class="mt-2 p-2 border-top">
+                                                            <label class="small fw-bold text-danger">Missing points / Errors:</label>  
+                                                            <textarea name="operator_remarks" class="form-control form-control-sm" rows="2"
+                                                                    placeholder="Specify what is missing..."></textarea>
+                                                        </div>
+
+                                                        <button type="submit" class="btn btn-sm btn-primary w-100 mt-2">
+                                                            <i class="fas fa-check-double"></i> Complete Verification
+                                                        </button>
+                                                    </form>
+
+                                                {% elif request.user.approval_role.role == "mk_sabhya" and "sabhya" in form.current_approval_level.level_name|lower or request.user.approval_role.role == "mk_sabhya" and "sabhay" in form.current_approval_level.level_name|lower %} 
+                                                    {% if can_take_action %} 
+                                                        <form method="post" action="{% url 'verify_document' doc.id %}" class="p-2 border rounded bg-light shadow-sm"> 
+                                                            {% csrf_token %}
+
+                                                            <h6 class="small fw-bold text-primary border-bottom pb-1 mb-2"><i class="fas fa-history"></i> Review Revised Checklist (MK Sabhya)</h6>
+                                                            <div class="alert alert-warning py-1 px-2 small mb-2" style="font-size: 1rem; color: #664d03; background-color: #fff3cd; border-color: #ffecb5;">
+                                                                <i class="fas fa-info-circle me-1"></i>
+                                                                Form Resubmitted. Please re-verify the documents and updated fields before confirming.
+                                                            </div>    
+
+                                                            <div class="form-check small mb-2">
+                                                                <input class="form-check-input border-primary" type="checkbox" id="master_confirm_{{doc.id}}" required>                                                        
+                                                                <label class="form-check-label fw-bold" for="master_confirm_{{doc.id}}"> 
+                                                                    I confirm that I have verified the revised documents and amendments. 
+                                                                </label>
+                                                            </div>
+
+                                                            <div class="text-end mb-2">
+                                                                <button type="button" class="btn btn-link btn-sm text-danger p-0 small text-decoration-none"
+                                                                        onclick="toggleDiscrepancy('{{doc.id}}')">  
+                                                                    <i class="fas fa-exclamation-triangle me-1"></i> Still found an error? Click here   
+                                                                </button>
+                                                            </div>
+
+                                                            <div id="discrepancy_box_{{doc.id}}" style="display: none;" class="mt-2 p-2 border-top">
+                                                                <label class="small fw-bold text-danger">Missing points / Errors:</label>
+                                                                <textarea name="operator_remarks" class="form-control form-control-sm" rows="2"
+                                                                        placeholder="Specify why it needs another revision..."></textarea>
+                                                            </div>
+
+                                                            <button type="submit" class="btn btn-sm btn-warning w-100 mt-2 text-dark fw-bold">
+                                                                <i class="fas fa-check-double"></i> Complete Revision Verification
+                                                            </button>    
+                                                        </form> 
+                                                    {% else %}        
+                                                        <span class="text-muted small"><i class="fas fa-hourglass-half me-1"></i>Awaiting MK Sabhya Level Verification</span>
+                                                    {% endif %}
+
+                                                {% else %}
+                                                    {% if form.status == "submitted" %}
+                                                        <span class="text-muted small"><i class="fas fa-hourglass-start me-1"></i>Awaiting Operator Verification</span>     
+                                                    {% else %}
+                                                        {% if not form.department %} 
+                                                            <span class="text-muted small"><i class="fas fa-hourglass-start me-1"></i>Awaiting Operator Level Verification</span>                                                     
+                                                        {% else %}                                  
+                                                            <span class="text-muted small"><i class="fas fa-hourglass-half me-1"></i>Awaiting MK Sabhya Level Verification</span> 
+                                                        {% endif %}
+                                                    {% endif %}
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> No documents uploaded yet.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Comments Tab - FIXED WITH MULTI-LEVEL VISIBILITY -->
+        <div class="tab-pane fade" id="comments" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #6f42c1; color: white;">
+                    <strong>Comments & Messages</strong>
+                    <span id="comment-count" class="badge bg-light text-dark">0 comments</span>
+                </div>
+                <div class="card-body">
+
+                    <form method="post" action="{% url 'add_comment' form.id %}" class="mb-4">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <textarea name="comment_text" class="form-control" rows="3" 
+                                      placeholder="Write your comment here..." required></textarea>
+                        </div>
+
+                        <!-- Multi-level visibility checkboxes -->
+                        <div class="mb-3">
+                            <strong>Make this comment visible to:</strong><br>
+                            {% for level in all_approval_levels %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="visible_to_levels" 
+                                           value="{{ level.id }}" id="level_{{ level.id }}">
+                                    <label class="form-check-label" for="level_{{ level.id }}">
+                                        {{ level.level_name }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Post Comment
+                        </button>
+                    </form>
+
+                    <hr>
+
+                    {% if comments %}
+                        <div id="comments-list">
+                            {% for action in form.actions.all %}
+                                {% if action.remarks %}
+                                    <div class="comment-card mb-3 p-3 border rounded border-info bg-light">
+                                        <div class="d-flex justify-content-between">
+                                            <strong class="text-primary"><i class="fas fa-gavel"></i> {{ action.get_action_type_display }}: {{ action.approval_level.level_name }}</strong>
+                                            <small class="text-muted">{{ action.created_at|date:"d-m-Y H:i" }}</small>
+                                        </div>
+                                        <div class="mt-2">
+                                            {{ action.remarks }}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% for comment in comments %}
+                                {% if comment.is_visible %}
+                                    <div class="comment-card mb-3 p-3 border rounded">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <strong>{{ comment.commented_by.get_full_name|default:comment.commented_by.username }}</strong>
+                                            <small class="text-muted">{{ comment.created_at|date:"d-m-Y H:i" }}</small>
+                                        </div>
+                                        <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+                                            {% if comment.is_lesser_approval %}
+                                                <span class="badge bg-warning text-dark">
+                                                    <strong>Remark for Lesser Approved Amount</strong>
+                                                </span>
+                                            {% endif %}
+
+                                            <span class="comment-text mb-0">
+                                                {{ comment.comment_text }}
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- Visibility Badges -->
+                                        <div class="mt-2">
+                                            {% if comment.visible_to_levels.all %}
+                                                Visible to: 
+                                                {% for level in comment.visible_to_levels.all %}
+                                                    <span class="badge bg-secondary me-1">{{ level.level_name }}</span>
+                                                {% endfor %}
+                                            {% elif comment.show_to_lower_levels %}
+                                                <span class="badge bg-success">Visible to Lower Levels</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Internal Only</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info text-center py-4">
+                            <i class="fas fa-comments fa-2x mb-3 text-muted"></i>
+                            <p>No comments yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons for Approvers -->
+    {% if can_take_action and not already_actioned_by_me %}
+        <div class="mt-2">
+            <h5 class="mb-3">Take Action</h5>
+
+            {# delegation_reply panel is rendered inside the form below the delegate dropdown #}
+
+            {% if not form.department %}
+                <!-- Center Form - Department Selection Required -->
+                <div class="alert alert-info">
+                    <strong>Note:</strong> This form was initiated from a Center.
+                    Please select the responsible Department before proceeding.
+                </div>
+
+                <form method="post" action="{% url 'approve_form' form.id %}" id="centerApprovalForm">
+                    {% csrf_token %}                  
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <strong>Select Department</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Responsible Department <span class="text-danger">*</span></label>
+                                <select name="department_id" id="operator_dept_select" class="form-select select2-searchable" required>
+                                    <option value="">-- Search and Select Department --</option>
+                                    {% for dept in all_departments %}
+                                        <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.code }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        
+                            <div class="mt-4">
+                                {% if is_operator and has_unverified_docs %}
+                                    <div class="text-danger mb-2">
+                                        ⚠️ Please verify all documents before approval
+                                    </div>
+                                {% endif %}
+                                <button type="submit"
+                                        name="action"
+                                        value="approve"
+                                        class="btn btn-success btn-lg me-3"
+                                        {% if is_operator and has_unverified_docs %}disabled{% endif %}>
+
+                                    <i class="fas fa-thumbs-up"></i> Approve
+                                </button>
+                                <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                    <i class="fas fa-thumbs-down"></i> Reject
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            {% else %}
+                <!-- Normal Department Form -->
+                <div class="alert alert-success">
+                    <strong>Department:</strong> {{ form.department.name }} ({{ form.department.code }})
+                </div>
+
+                <form method="post" action="{% url 'approve_form' form.id %}" id="masterActionForm">
+                    {% csrf_token %}
+                    <!-- ===== 3RD PARTY DELEGATION REPLY PANEL ===== -->
+                    {% if delegation_reply and show_delegation_reply_to_me %}
+                        {% if delegation_reply.action_type == 'approved_by_internal' or delegation_reply.action_type == 'rejected_by_internal' or delegation_reply.action_type == 'delegation_returned' %}
+                            
+                            {# ---- INTERNAL 3rd Party (selected from dropdown) ---- #}
+                            {% if delegation_reply.action_type == 'approved_by_internal' %}
+                                <div class="card mb-4 mt-3" style="border-left: 5px solid #0d6efd !important;">
+                                    <div class="card-header text-white d-flex align-items-center gap-2" style="background-color: #0d6efd;">
+                                        <i class="fas fa-user-check fa-lg"></i>
+                                        <strong>Internal 3rd Party Verifier — Approved 🔵✅</strong>
+                                        <span class="ms-auto badge bg-light text-primary" style="font-size:0.85rem;">
+                                            {{ delegation_reply.created_at|date:"d-m-Y H:i" }}
+                                        </span>
+                                    </div>
+                                    <div class="card-body">
+                                        
+                                        <!-- Delegation context info -->
+                                        {% if delegation_context %}
+                                            <div class="row mb-3 pb-2 border-bottom">
+                                                <div class="col-md-6">
+                                                    <p class="mb-1">
+                                                        <i class="fas fa-user-tie text-muted me-1"></i>
+                                                        <strong>Delegated by:</strong>
+                                                        {{ delegation_context.delegated_by_name|default:"—" }}
+                                                    </p>
+                                                    {% if delegation_context.delegated_by_email %}
+                                                        <p class="mb-1">
+                                                            <i class="fas fa-envelope text-muted me-1"></i>
+                                                            <strong>Delegator Email:</strong>
+                                                            {{ delegation_context.delegated_by_email }}
+                                                        </p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="col-md-6">
+                                                    {% if delegation_context.external_email %}
+                                                        <p class="mb-1">
+                                                            <i class="fas fa-at text-muted me-1"></i>
+                                                            <strong>External Verifier Email:</strong>
+                                                            <span class="text-primary fw-bold">{{ delegation_context.external_email }}</span>
+                                                        </p>
+                                                    {% endif %}
+                                                    {% if delegation_context.delegated_level %}
+                                                        <p class="mb-1">
+                                                            <i class="fas fa-layer-group text-muted me-1"></i>
+                                                            <strong>Delegation Level:</strong>
+                                                            {{ delegation_context.delegated_level }}
+                                                        </p>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p class="mb-1"><i class="fas fa-user text-muted me-1"></i>
+                                                    <strong>Verifier:</strong>
+                                                    {% if delegation_reply.actor %}{{ delegation_reply.actor.get_full_name|default:delegation_reply.actor.username }}{% else %}Internal Verifier{% endif %}
+                                                </p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p class="mb-1"><i class="fas fa-clock text-muted me-1"></i>
+                                                    <strong>Replied:</strong> {{ delegation_reply.created_at|date:"d-m-Y H:i" }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {% if delegation_reply.remarks %}
+                                            <div class="mt-3 p-3 bg-light rounded border">
+                                                <strong><i class="fas fa-comment-dots me-1 text-primary"></i> Verifier's Remarks:</strong>
+                                                <p class="mb-0 mt-1">{{ delegation_reply.remarks }}</p>
+                                            </div>
+                                        {% else %}
+                                            <div class="mt-3 p-3 rounded" style="background-color:#e8f0fe; border:1px solid #0d6efd;">
+                                                <i class="fas fa-info-circle text-primary me-1"></i>
+                                                {% if verifier_has_comments %}
+                                                    The 3rd Party verifier may have added their feedback in the
+                                                    <a href="#comments" data-bs-toggle="tab" data-bs-target="#comments" class="fw-bold text-primary">Comments tab</a> — please check there.
+                                                {% else %}
+                                                    <strong>No comments from the 3rd Party verifier.</strong>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                        <div class="mt-3 alert alert-info py-2 mb-0">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Internal verifier has <strong>approved</strong>. Review their feedback and proceed with your decision below.
+                                        </div>
+                                    </div>
+                                </div>
+
+                            {% elif delegation_reply.action_type == 'rejected_by_internal' %}
+                                <div class="card mb-4 mt-3" style="border-left: 5px solid #6f42c1 !important;">
+                                    <div class="card-header text-white d-flex align-items-center gap-2" style="background-color: #6f42c1;">
+                                        <i class="fas fa-user-times fa-lg"></i>
+                                        <strong>Internal 3rd Party Verifier — Rejected 🔴</strong>
+                                        <span class="ms-auto badge bg-light text-danger" style="font-size:0.85rem;">
+                                            {{ delegation_reply.created_at|date:"d-m-Y H:i" }}
+                                        </span>
+                                    </div>
+                                    <div class="card-body">
+                                        
+                                        <!-- Delegation context info -->
+                                        {% if delegation_context %}
+                                            <div class="row mb-3 pb-2 border-bottom">
+                                                <div class="col-md-6">
+                                                    <p class="mb-1">
+                                                        <i class="fas fa-user-tie text-muted me-1"></i>
+                                                        <strong>Delegated by:</strong>
+                                                        {{ delegation_context.delegated_by_name|default:"—" }}
+                                                    </p>
+                                                    {% if delegation_context.delegated_by_email %}
+                                                        <p class="mb-1">
+                                                            <i class="fas fa-envelope text-muted me-1"></i>
+                                                            <strong>Delegator Email:</strong>
+                                                            {{ delegation_context.delegated_by_email }}
+                                                        </p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="col-md-6">
+                                                    {% if delegation_context.external_email %}
+                                                        <p class="mb-1">
+                                                            <i class="fas fa-at text-muted me-1"></i>
+                                                            <strong>External Verifier Email:</strong>
+                                                            <span class="text-primary fw-bold">{{ delegation_context.external_email }}</span>
+                                                        </p>
+                                                    {% endif %}
+                                                    {% if delegation_context.delegated_level %}
+                                                        <p class="mb-1">
+                                                            <i class="fas fa-layer-group text-muted me-1"></i>
+                                                            <strong>Delegation Level:</strong>
+                                                            {{ delegation_context.delegated_level }}
+                                                        </p>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p class="mb-1"><i class="fas fa-user text-muted me-1"></i>
+                                                    <strong>Verifier:</strong>
+                                                    {% if delegation_reply.actor %}{{ delegation_reply.actor.get_full_name|default:delegation_reply.actor.username }}{% else %}Internal Verifier{% endif %}
+                                                </p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p class="mb-1"><i class="fas fa-clock text-muted me-1"></i>
+                                                    <strong>Replied:</strong> {{ delegation_reply.created_at|date:"d-m-Y H:i" }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {% if delegation_reply.remarks %}
+                                            <div class="mt-3 p-3 bg-light rounded border border-danger">
+                                                <strong><i class="fas fa-comment-dots me-1 text-danger"></i> Verifier's Remarks:</strong>
+                                                <p class="mb-0 mt-1">{{ delegation_reply.remarks }}</p>
+                                            </div>
+                                        {% else %}
+                                            <div class="mt-3 p-3 rounded" style="background-color:#fdf0f0; border:1px solid #dc3545;">
+                                                <i class="fas fa-info-circle text-danger me-1"></i>
+                                                {% if verifier_has_comments %}
+                                                    The 3rd Party verifier may have added their feedback in the
+                                                    <a href="#comments" data-bs-toggle="tab" data-bs-target="#comments" class="fw-bold text-danger">Comments tab</a> — please check there.
+                                                {% else %}
+                                                    <strong>No comments from the 3rd Party verifier.</strong>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                        <div class="mt-3 alert alert-warning py-2 mb-0">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            Internal verifier has <strong>rejected</strong>. Review their feedback and decide whether to reject or re-delegate.
+                                        </div>
+                                    </div>
+                                </div>
+
+                            {% else %}
+                                {# delegation_returned - neutral return #}
+                                <div class="card mb-4 mt-3" style="border-left: 5px solid #0d6efd !important;">
+                                    <div class="card-header text-white d-flex align-items-center gap-2" style="background-color: #0d6efd;">
+                                        <i class="fas fa-undo fa-lg"></i>
+                                        <strong>Internal 3rd Party Verifier — Reply Received 🔁</strong>
+                                        <span class="ms-auto badge bg-light text-primary" style="font-size:0.85rem;">
+                                            {{ delegation_reply.created_at|date:"d-m-Y H:i" }}
+                                        </span>
+                                    </div>
+                                    <div class="card-body">
+                                        
+                                        <!-- Delegation context info -->
+                                        {% if delegation_context %}
+                                            <div class="row mb-3 pb-2 border-bottom">
+                                                <div class="col-md-6">
+                                                    <p class="mb-1">
+                                                        <i class="fas fa-user-tie text-muted me-1"></i>
+                                                        <strong>Delegated by:</strong>
+                                                        {{ delegation_context.delegated_by_name|default:"—" }}
+                                                    </p>
+                                                    {% if delegation_context.delegated_by_email %}
+                                                        <p class="mb-1">
+                                                            <i class="fas fa-envelope text-muted me-1"></i>
+                                                            <strong>Delegator Email:</strong>
+                                                            {{ delegation_context.delegated_by_email }}
+                                                        </p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="col-md-6">
+                                                    {% if delegation_context.external_email %}
+                                                        <p class="mb-1">
+                                                            <i class="fas fa-at text-muted me-1"></i>
+                                                            <strong>External Verifier Email:</strong>
+                                                            <span class="text-primary fw-bold">{{ delegation_context.external_email }}</span>
+                                                        </p>
+                                                    {% endif %}
+                                                    {% if delegation_context.delegated_level %}
+                                                        <p class="mb-1">
+                                                            <i class="fas fa-layer-group text-muted me-1"></i>
+                                                            <strong>Delegation Level:</strong>
+                                                            {{ delegation_context.delegated_level }}
+                                                        </p>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p class="mb-1"><i class="fas fa-user text-muted me-1"></i>
+                                                    <strong>Verifier:</strong>
+                                                    {% if delegation_reply.actor %}{{ delegation_reply.actor.get_full_name|default:delegation_reply.actor.username }}{% else %}Internal Verifier{% endif %}
+                                                </p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p class="mb-1"><i class="fas fa-clock text-muted me-1"></i>
+                                                    <strong>Replied:</strong> {{ delegation_reply.created_at|date:"d-m-Y H:i" }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {% if delegation_reply.remarks %}
+                                            <div class="mt-3 p-3 bg-light rounded border">
+                                                <strong><i class="fas fa-comment-dots me-1 text-primary"></i> Verifier's Remarks:</strong>
+                                                <p class="mb-0 mt-1">{{ delegation_reply.remarks }}</p>
+                                            </div>
+                                        {% else %}
+                                            <div class="mt-3 p-3 rounded" style="background-color:#e8f0fe; border:1px solid #0d6efd;">
+                                                <i class="fas fa-info-circle text-primary me-1"></i>
+                                                {% if verifier_has_comments %}
+                                                    The 3rd Party verifier may have added their feedback in the
+                                                    <a href="#comments" data-bs-toggle="tab" data-bs-target="#comments" class="fw-bold text-primary">Comments tab</a> — please check there.
+                                                {% else %}
+                                                    <strong>No comments from the 3rd Party verifier.</strong>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                        <div class="mt-3 alert alert-info py-2 mb-0">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Internal verifier has reviewed and returned this form. Proceed with your decision below.
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                        {% elif delegation_reply.action_type == 'approved_by_external' %}
+                            {# ---- EXTERNAL 3rd Party (manually entered email) — Green ---- #}
+                            <div class="card border-success mb-4 mt-3" style="border-left: 5px solid #198754 !important;">
+                                <div class="card-header bg-success text-white d-flex align-items-center gap-2">
+                                    <i class="fas fa-check-circle fa-lg"></i>
+                                    <strong>External 3rd Party Verifier — Approved ✅</strong>
+                                    <span class="ms-auto badge bg-light text-success" style="font-size:0.85rem;">
+                                        {{ delegation_reply.created_at|date:"d-m-Y H:i" }}
+                                    </span>
+                                </div>
+                                <div class="card-body">
+                                    
+                                    <!-- Delegation context info -->
+                                    {% if delegation_context %}
+                                        <div class="row mb-3 pb-2 border-bottom">
+                                            <div class="col-md-6">
+                                                <p class="mb-1">
+                                                    <i class="fas fa-user-tie text-muted me-1"></i>
+                                                    <strong>Delegated by:</strong>
+                                                    {{ delegation_context.delegated_by_name|default:"—" }}
+                                                </p>
+                                                {% if delegation_context.delegated_by_email %}
+                                                    <p class="mb-1">
+                                                        <i class="fas fa-envelope text-muted me-1"></i>
+                                                        <strong>Delegator Email:</strong>
+                                                        {{ delegation_context.delegated_by_email }}
+                                                    </p>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-6">
+                                                {% if delegation_context.external_email %}
+                                                    <p class="mb-1">
+                                                        <i class="fas fa-at text-muted me-1"></i>
+                                                        <strong>External Verifier Email:</strong>
+                                                        <span class="text-primary fw-bold">{{ delegation_context.external_email }}</span>
+                                                    </p>
+                                                {% endif %}
+                                                {% if delegation_context.delegated_level %}
+                                                    <p class="mb-1">
+                                                        <i class="fas fa-layer-group text-muted me-1"></i>
+                                                        <strong>Delegation Level:</strong>
+                                                        {{ delegation_context.delegated_level }}
+                                                    </p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><i class="fas fa-envelope text-muted me-1"></i>
+                                                <strong>Verifier:</strong>
+                                                {% if delegation_reply.actor %}{{ delegation_reply.actor.get_full_name|default:delegation_reply.actor.username }}{% else %}External Verifier{% endif %}
+                                            </p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><i class="fas fa-clock text-muted me-1"></i>
+                                                <strong>Replied:</strong> {{ delegation_reply.created_at|date:"d-m-Y H:i" }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {% if delegation_reply.remarks %}
+                                        <div class="mt-3 p-3 bg-light rounded border border-success">
+                                            <strong><i class="fas fa-comment-dots me-1 text-success"></i> Verifier's Remarks:</strong>
+                                            <p class="mb-0 mt-1">{{ delegation_reply.remarks }}</p>
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted mt-2 mb-0"><em>No remarks provided by external verifier.</em></p>
+                                    {% endif %}
+                                    <div class="mt-3 alert alert-success py-2 mb-0">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        External verifier has <strong>approved</strong>. Proceed with your decision below.
+                                    </div>
+                                </div>
+                            </div>
+
+                        {% elif delegation_reply.action_type == 'rejected_by_external' %}
+                            {# ---- EXTERNAL 3rd Party (manually entered email) — Red ---- #}
+                            <div class="card border-danger mb-4 mt-3" style="border-left: 5px solid #dc3545 !important;">
+                                <div class="card-header bg-danger text-white d-flex align-items-center gap-2">
+                                    <i class="fas fa-times-circle fa-lg"></i>
+                                    <strong>External 3rd Party Verifier — Rejected ❌</strong>
+                                    <span class="ms-auto badge bg-light text-danger" style="font-size:0.85rem;">
+                                        {{ delegation_reply.created_at|date:"d-m-Y H:i" }}
+                                    </span>
+                                </div>
+                                <div class="card-body">
+                                    
+                                    <!-- Delegation context info -->
+                                    {% if delegation_context %}
+                                        <div class="row mb-3 pb-2 border-bottom">
+                                            <div class="col-md-6">
+                                                <p class="mb-1">
+                                                    <i class="fas fa-user-tie text-muted me-1"></i>
+                                                    <strong>Delegated by:</strong>
+                                                    {{ delegation_context.delegated_by_name|default:"—" }}
+                                                </p>
+                                                {% if delegation_context.delegated_by_email %}
+                                                    <p class="mb-1">
+                                                        <i class="fas fa-envelope text-muted me-1"></i>
+                                                        <strong>Delegator Email:</strong>
+                                                        {{ delegation_context.delegated_by_email }}
+                                                    </p>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-6">
+                                                {% if delegation_context.external_email %}
+                                                    <p class="mb-1">
+                                                        <i class="fas fa-at text-muted me-1"></i>
+                                                        <strong>External Verifier Email:</strong>
+                                                        <span class="text-primary fw-bold">{{ delegation_context.external_email }}</span>
+                                                    </p>
+                                                {% endif %}
+                                                {% if delegation_context.delegated_level %}
+                                                    <p class="mb-1">
+                                                        <i class="fas fa-layer-group text-muted me-1"></i>
+                                                        <strong>Delegation Level:</strong>
+                                                        {{ delegation_context.delegated_level }}
+                                                    </p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><i class="fas fa-envelope text-muted me-1"></i>
+                                                <strong>Verifier:</strong>
+                                                {% if delegation_reply.actor %}{{ delegation_reply.actor.get_full_name|default:delegation_reply.actor.username }}{% else %}External Verifier{% endif %}
+                                            </p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><i class="fas fa-clock text-muted me-1"></i>
+                                                <strong>Replied:</strong> {{ delegation_reply.created_at|date:"d-m-Y H:i" }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {% if delegation_reply.remarks %}
+                                        <div class="mt-3 p-3 bg-light rounded border border-danger">
+                                            <strong><i class="fas fa-comment-dots me-1 text-danger"></i> Verifier's Remarks:</strong>
+                                            <p class="mb-0 mt-1">{{ delegation_reply.remarks }}</p>
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted mt-2 mb-0"><em>No remarks provided by external verifier.</em></p>
+                                    {% endif %}
+                                    <div class="mt-3 alert alert-danger py-2 mb-0">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        External verifier has <strong>rejected</strong>. Review their feedback and decide whether to reject or re-delegate.
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+
+
+                    <!-- Delegate Selection -->
+                    {% if allow_delegate and not is_delegated_to_me %}
+                        <div class="mb-4">
+                            <label class="form-label">Delegate to 3rd Party Verifier</label>
+                            <select name="delegate_to" id="delegate_to" class="form-select">
+                                <option value="">-- Select from existing users --</option>
+                                {% for verifier in third_party_verifiers %}
+                                    <option value="{{ verifier.id }}">
+                                        {{ verifier.get_full_name|default:verifier.username }} 
+                                        ({{ verifier.email }})
+                                    </option>
+                                {% endfor %}
+                                </select>
+                            </div>
+                    {% endif %}
+
+                    <!-- ===== END DELEGATION REPLY PANEL ===== -->
+
+                    <!-- ✅ FIX 3: Delegate to 3rd Party button ABOVE Final Amount field -->
+                    {% if allow_delegate and not is_delegated_to_me %}
+                        <div class="mt-3 mb-3">
+                            <button type="submit" name="action" value="delegate" 
+                                    class="btn btn-warning btn-lg no-loader"
+                                    formnovalidate>
+                                <i class="fas fa-share"></i> Delegate to 3rd Party
+                            </button>
+                        </div>
+                    {% endif %}
+
+                    <!-- ===== FINAL APPROVED AMOUNT SECTION (Final Approver Only) ===== -->
+                    {% if is_final_approver and not is_delegated_to_me %}
+                    <div class="card mb-4" style="border-left: 5px solid #fd7e14;">
+                        <div class="card-header text-white" style="background-color: #fd7e14;">
+                            {% if form.currency_code != 'INR' %}
+                                <i class="fas fa-dollar-sign me-1"></i>
+                            {% else %}
+                                <i class="fas fa-rupee-sign me-1"></i>
+                            {% endif %}
+                            <strong>Final Approval Amount</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="row align-items-center g-3">
+
+                                <!-- ===== Requested Amount (read-only) ===== -->
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted fw-bold">
+                                        <i class="fas fa-file-invoice me-1"></i>
+                                        Center / Department Requested Amount
+                                    </label>
+                                    {% if form.currency_code != 'INR' %}
+                                        <!-- Foreign: show local currency as primary -->
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light fw-bold">{{ form.currency_symbol }}</span>
+                                            <input type="text"
+                                                   class="form-control bg-light fw-bold text-secondary"
+                                                   value="{{ form.amount|floatformat:2|intcomma }}"
+                                                   readonly tabindex="-1"
+                                                   style="font-size:1.1rem; cursor:not-allowed;">
+                                            <span class="input-group-text bg-light text-muted">
+                                                <i class="fas fa-lock fa-sm"></i>
+                                            </span>
+                                        </div>
+                                        <small class="text-muted mt-1 d-block">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            INR equivalent: <strong>₹ {{ form.amount_inr|floatformat:2|intcomma }}</strong>
+                                            (1 {{ form.currency_code }} = ₹{{ form.exchange_rate_used }} at submission)
+                                        </small>
+                                    {% else %}
+                                        <!-- INR: normal display -->
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light fw-bold">₹</span>
+                                            <input type="text"
+                                                   class="form-control bg-light fw-bold text-secondary"
+                                                   value="{{ form.amount|floatformat:2|intcomma }}"
+                                                   readonly tabindex="-1"
+                                                   style="font-size:1.1rem; cursor:not-allowed;">
+                                            <span class="input-group-text bg-light text-muted">
+                                                <i class="fas fa-lock fa-sm"></i>
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>This is the original requested amount — not editable.
+                                        </small>
+                                    {% endif %}
+                                </div>
+
+                                <!-- ===== Final Approved Amount (editable) ===== -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-success">
+                                        <i class="fas fa-check-circle me-1 text-success"></i>
+                                        Final Approved Amount
+                                    </label>
+
+                                    {% if form.currency_code != 'INR' %}
+                                        <!-- Foreign: approver enters in LOCAL currency -->
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-success text-white fw-bold">{{ form.currency_symbol }}</span>
+                                            <input type="number"
+                                                   name="approved_amount_local_input"
+                                                   id="approved_amount_local_input"
+                                                   class="form-control fw-bold"
+                                                   value="{{ form.amount|floatformat:2|unlocalize }}"
+                                                   step="0.01" min="0"
+                                                   style="font-size:1.1rem;"
+                                                   placeholder="Enter approved amount in {{ form.currency_code }}">
+                                        </div>
+                                        <!-- Hidden field converts to INR and sends to backend -->
+                                        <input type="hidden" name="approved_amount" id="approved_amount">
+                                        <small class="text-muted mt-1 d-block">
+                                            <i class="fas fa-edit me-1"></i>
+                                            Enter in <strong>{{ form.currency_code }}</strong>.
+                                            If less than requested, remarks are mandatory.
+                                        </small>
+                                        <!-- Live INR equivalent preview -->
+                                        <div class="mt-2 p-2 rounded" style="background:#f0fff4; border-left:3px solid #28a745;">
+                                            <small>
+                                                <i class="fas fa-exchange-alt me-1 text-success"></i>
+                                                INR equivalent: <strong id="inr_equiv" class="text-success">—</strong>
+                                                <span id="inr_equiv_note" class="text-muted ms-1"></span>
+                                            </small>
+                                        </div>
+                                        <script>
+                                        (function() {
+                                            const RATE = parseFloat("{{ form.exchange_rate_used|default:'1' }}");
+                                            const CODE = "{{ form.currency_code }}";
+                                            const localInput = document.getElementById('approved_amount_local_input');
+                                            const hiddenInr  = document.getElementById('approved_amount');
+                                            const preview    = document.getElementById('inr_equiv');
+                                            const note       = document.getElementById('inr_equiv_note');
+
+                                            function update() {
+                                                const localVal = parseFloat(localInput.value);
+                                                if (!isNaN(localVal) && localVal >= 0 && RATE > 0) {
+                                                    const inr = (localVal * RATE).toFixed(2);
+                                                    hiddenInr.value = inr;
+                                                    preview.textContent = '₹ ' + parseFloat(inr).toLocaleString('en-IN', {
+                                                        minimumFractionDigits: 2,
+                                                        maximumFractionDigits: 2
+                                                    });
+                                                    note.textContent = '(1 ' + CODE + ' = ₹' + RATE.toFixed(4) + ', submission rate)';
+                                                } else {
+                                                    hiddenInr.value = '';
+                                                    preview.textContent = '—';
+                                                    note.textContent = '';
+                                                }
+                                            }
+                                            if (localInput) { localInput.addEventListener('input', update); update(); }
+                                        })();
+                                        </script>
+                                    {% else %}
+                                        <!-- INR: approver enters in INR directly -->
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-success text-white fw-bold">₹</span>
+                                            <input type="number"
+                                                   name="approved_amount"
+                                                   id="approved_amount"
+                                                   class="form-control fw-bold"
+                                                   value="{{ form.amount|floatformat:2|unlocalize }}"
+                                                   step="0.01" min="0"
+                                                   style="font-size:1.1rem;"
+                                                   placeholder="Enter final approved amount">
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-edit me-1"></i>You may change this. If less than requested, remarks are mandatory.
+                                        </small>
+                                    {% endif %}
+                                </div>
+
+                            </div>
+
+                            <!-- Live difference indicator -->
+                            <div id="amount_diff_row" class="mt-3" style="display:none;">
+                                <div id="amount_diff_alert" class="alert py-2 mb-0"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mandatory Remarks Modal (auto-opens when amount is reduced) -->
+                    <div class="modal fade" id="remarksModal" tabindex="-1" aria-labelledby="remarksModalLabel" aria-modal="true" role="dialog">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content border-warning">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title" id="remarksModalLabel">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        Remarks Required — Reduced Amount
+                                    </h5>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-warning py-2">
+                                        <strong>Requested:</strong>
+                                        {{ form.currency_symbol }}<span id="modal_requested">{{ form.amount|floatformat:2|intcomma }}</span>
+                                        {% if form.currency_code != 'INR' %}
+                                            <small class="text-muted">(≈ ₹{{ form.amount_inr|floatformat:2|intcomma }})</small>
+                                        {% endif %}
+                                        &nbsp;→&nbsp;
+                                        <strong>Approved:</strong>
+                                        {{ form.currency_symbol }}<span id="modal_approved">—</span>
+                                        &nbsp;
+                                        <strong class="text-danger">(<span id="modal_diff">—</span> less)</strong>
+                                    </div>
+                                    <p>Please provide a reason for approving a reduced amount:</p>
+                                    <textarea name="remarks"
+                                              id="remarks_field"
+                                              class="form-control"
+                                              rows="4"
+                                              placeholder="e.g. Amount reduced as per budget constraints / revised quotation..."
+                                              required></textarea>
+                                    <small class="text-danger mt-1 d-block" id="remarks_error" style="display:none !important;"></small>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" id="cancel_approve_btn">
+                                        <i class="fas fa-times me-1"></i> Cancel
+                                    </button>
+                                    <button type="button" class="btn btn-warning" id="confirm_approve_btn">
+                                        <i class="fas fa-check me-1"></i> Confirm & Approve
+                                    </button>
+                                </div>
+                            </div>
+                        </div> 
+                    </div> 
+                    <div class="modal fade" id="optionalRemarkModal" tabindex="-1" data-bs-backdrop="static">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content border-primary">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">Add Approval Remarks?</h5>
+                                </div>
+                                <div class="modal-body text-center">
+                                    <p>Do you want to add any remarks before approving for the full amount?</p>
+                                    <div id="optional_remark_container" style="display: none;" class="mt-3 text-start">
+                                        <textarea id="optional_approve_remarks" class="form-control" rows="3" placeholder="Enter remarks..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer justify-content-center">
+                                    <button type="button" class="btn btn-outline-secondary" id="btn_no_remark">No, Approve Directly</button>
+                                    <button type="button" class="btn btn-primary" id="btn_yes_remark">Yes, Add Remark</button>
+                                    <button type="button" class="btn btn-success" id="btn_final_approve_optional" style="display: none;">Confirm & Approve</button>
+                                </div>
+                            </div>
+                        </div>                    
+                    </div>
+                    {% endif %}
+
+                    <!-- ===== END DELEGATION REPLY PANEL ===== -->
+
+                    <!-- ✅ Reject Modal — available to ALL approvers (not just final) -->
+                    <div class="modal fade" id="rejectModal" tabindex="-1" data-bs-backdrop="static">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content border-danger">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-times-circle me-2"></i>Rejection Reason Required
+                                    </h5>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="text-muted small mb-2">Remarks are mandatory for rejection.</p>
+                                    <textarea id="reject_remarks_field" class="form-control" rows="4"
+                                              placeholder="Please provide a clear reason for rejection..."></textarea>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="fas fa-times me-1"></i> Cancel
+                                    </button>
+                                    <button type="button" class="btn btn-danger" onclick="submitRejectWithRemarks()">
+                                        <i class="fas fa-ban me-1"></i> Confirm Rejection
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        {% if already_actioned_by_me %}
+                            <!-- ✅ Already actioned — show disabled buttons + notice -->
+                            <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" role="alert">
+                                <i class="fas fa-lock fa-lg"></i>
+                                <div>
+                                    {% if already_action_type == 'approved' %}
+                                        {% if form.status == 'approved' %}
+                                            <strong>This form has already been finally approved.</strong>
+                                            No further action is required from you.
+                                        {% else %}
+                                            <strong>You have already approved this form.</strong>
+                                            It has been forwarded for further approval.
+                                        {% endif %}
+                                    {% elif already_action_type == 'rejected' %}
+                                        <strong>You have already rejected this form.</strong>
+                                        No further action can be taken.
+                                    {% else %}
+                                        <strong>You have already acted on this form.</strong>
+                                        No further action is required from you.
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <button type="button"
+                                    class="btn btn-success btn-lg me-3 disabled"
+                                    aria-disabled="true"
+                                    id="approve_btn_disabled"
+                                    onclick="showAlreadyActionedPopup('approve')">
+                                <i class="fas fa-thumbs-up"></i> Approve
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-danger btn-lg me-3 disabled"
+                                    aria-disabled="true"
+                                    id="reject_btn_disabled"
+                                    onclick="showAlreadyActionedPopup('reject')">
+                                <i class="fas fa-thumbs-down"></i> Reject
+                            </button>
+
+                        {% else %}
+                            <!-- Normal active buttons -->
+                            <button type="button" class="btn btn-success btn-lg me-3" id="approve_btn">
+                                <i class="fas fa-thumbs-up"></i> Approve
+                            </button>
+
+                            <button type="button" class="btn btn-danger btn-lg me-3" id="reject_btn">
+                                <i class="fas fa-thumbs-down"></i> Reject
+                            </button>
+
+                            <!-- ✅ Resubmit / Request Revision button -->
+                            {% if not is_delegated_to_me %}
+                                <button type="button" class="btn btn-info btn-lg text-white"
+                                        id="resubmit_btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#resubmitModal"
+                                        formnovalidate>
+                                    <i class="fas fa-redo-alt"></i> Request Resubmission
+                                </button>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Already-Actioned Popup Modal -->
+                    <div class="modal fade" id="alreadyActionedModal" tabindex="-1" aria-modal="true" role="dialog">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content border-warning">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        Action Already Taken
+                                    </h5>
+                                </div>
+                                <div class="modal-body" id="already_actioned_msg">
+                                    <!-- filled by JS -->
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="fas fa-times me-1"></i> Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ✅ Resubmit / Request Revision Modal - FIXED (no nested form) -->
+                    <div class="modal fade" id="resubmitModal" tabindex="-1" aria-modal="true" role="dialog">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content border-info">
+                                <div class="modal-header text-white" style="background-color:#0dcaf0;">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-redo-alt me-2"></i>
+                                        Request Resubmission from End User
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-info py-2 mb-3">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        This will <strong>send the form back to the End User</strong> for revision.
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">
+                                            <i class="fas fa-list-ul me-1 text-info"></i>
+                                            Documents / Changes Required <span class="text-danger">*</span>
+                                        </label>
+                                        <textarea id="resubmit_remarks" class="form-control" rows="5"
+                                                  placeholder="Specify exactly what documents or corrections are needed..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="fas fa-times me-1"></i> Cancel
+                                    </button>
+                                    <button type="button" onclick="submitResubmit()" class="btn btn-info text-white">
+                                        <i class="fas fa-paper-plane me-1"></i> Send Back for Revision
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    function updateCommentBadge() {
+        var totalComments = $('.comment-card').length;
+        if (totalComments > 0) {
+            $('#comment-count').text(totalComments + ' comments').show();
+        }
+    }
+    updateCommentBadge();
+    setInterval(updateCommentBadge, 5000);
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const delegateSelect = document.getElementById('delegate_to');
+    const externalDiv = document.getElementById('external_email_div');
+
+    if (delegateSelect) {
+        delegateSelect.addEventListener('change', function() {
+            if (this.value === 'other') {
+                externalDiv.style.display = 'block';
+            } else {
+                externalDiv.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
+
+<script>
+// ===== FINAL APPROVED AMOUNT LOGIC =====
+document.addEventListener('DOMContentLoaded', function () {
+    const isForeignCurrency = "{{ form.currency_code }}" !== "INR";
+    const currencySymbol = "{{ form.currency_symbol }}";
+    const isFinalApprover = {{ is_final_approver|yesno:"true,false" }};
+
+    // For foreign currency: listen to local input; for INR: listen to approved_amount directly
+    const approvedAmountInput = isForeignCurrency
+        ? document.getElementById('approved_amount_local_input')
+        : document.getElementById('approved_amount');
+
+    const approveBtn = document.getElementById('approve_btn');
+    const rejectBtn = document.getElementById('reject_btn');
+
+    const requestedAmount = parseFloat("{{ form.amount|floatformat:2|unlocalize }}".replace(/,/g, ''));
+    const mainForm = document.getElementById('masterActionForm');
+
+    // ── Approve Button ──────────────────────────────────────────
+    if (approveBtn) {
+        approveBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+
+            if (isFinalApprover && approvedAmountInput) {
+                // Final approver — check amount and show appropriate modal
+                const entered = parseFloat(approvedAmountInput.value);
+                if (isNaN(entered)) {
+                    alert("Please enter the approved amount.");
+                    return;
+                }
+                if (entered < requestedAmount) {
+                    document.getElementById('modal_approved').textContent = entered.toFixed(2);
+                    document.getElementById('modal_diff').textContent = (requestedAmount - entered).toFixed(2);
+                    new bootstrap.Modal(document.getElementById('remarksModal')).show();
+                } else if (entered > requestedAmount + 0.01) {
+                    alert(`Approved amount cannot exceed requested amount of ${currencySymbol}${requestedAmount.toFixed(2)}.`);
+                } else {
+                    new bootstrap.Modal(document.getElementById('optionalRemarkModal')).show();
+                }
+            } else {
+                // Non-final approver — just submit with action=approve directly
+                if (!mainForm) return;
+                mainForm.querySelectorAll('input[name="action"]').forEach(el => el.remove());
+                const inp = document.createElement('input');
+                inp.type = 'hidden'; inp.name = 'action'; inp.value = 'approve';
+                mainForm.appendChild(inp);
+                mainForm.submit();
+            }
+        });
+    }
+
+    // ── Live Difference Indicator (final approver only) ─────────
+    if (isFinalApprover && approvedAmountInput) {
+        approvedAmountInput.addEventListener('input', function () {
+            const entered = parseFloat(this.value);
+            const diffRow = document.getElementById('amount_diff_row');
+            const diffAlert = document.getElementById('amount_diff_alert');
+            if (isNaN(entered) || !diffRow) return;
+            diffRow.style.display = 'block';
+            const diff = requestedAmount - entered;
+            if (entered < requestedAmount) {
+                diffAlert.className = 'alert alert-warning py-2 mb-0';
+                diffAlert.innerHTML = `<strong>Amount reduced by ${currencySymbol}${diff.toFixed(2)}</strong>. Remarks mandatory.`;
+            } else if (entered > requestedAmount + 0.01) {
+                diffAlert.className = 'alert alert-danger py-2 mb-0';
+                diffAlert.innerHTML = `<strong>Cannot exceed ${currencySymbol}${requestedAmount.toFixed(2)}.</strong>`;
+            } else {
+                diffAlert.className = 'alert alert-success py-2 mb-0';
+                diffAlert.innerHTML = `Matches requested amount.`;
+            }
+        });
+    }
+
+    // ── Reject Button — always show modal with mandatory remarks ─
+    if (rejectBtn) {
+        rejectBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('reject_remarks_field').value = '';
+            new bootstrap.Modal(document.getElementById('rejectModal')).show();
+        });
+    }
+
+    // ── Optional Remark Modal Buttons (final approver) ──────────
+    const btnNoRemark = document.getElementById('btn_no_remark');
+    const btnYesRemark = document.getElementById('btn_yes_remark');
+    const btnFinalApproveOptional = document.getElementById('btn_final_approve_optional');
+
+    if (btnNoRemark) btnNoRemark.addEventListener('click', () => submitFinalApprove(null));
+    if (btnYesRemark) btnYesRemark.addEventListener('click', function() {
+        document.getElementById('optional_remark_container').style.display = 'block';
+        this.style.display = 'none';
+        if (btnNoRemark) btnNoRemark.style.display = 'none';
+        if (btnFinalApproveOptional) btnFinalApproveOptional.style.display = 'inline-block';
+    });
+    if (btnFinalApproveOptional) btnFinalApproveOptional.addEventListener('click', () => {
+        submitFinalApprove(document.getElementById('optional_approve_remarks').value.trim());
+    });
+
+    // ── Lesser Amount Confirmation (final approver) ─────────────
+    document.getElementById('confirm_approve_btn')?.addEventListener('click', function () {
+        const remarks = document.getElementById('remarks_field').value.trim();
+        if (!remarks) { alert("Remarks required for reduced amount."); return; }
+        submitFinalApprove(remarks);
+    });
+
+    // ── Helper: submit final approve ────────────────────────────
+    function submitFinalApprove(remarks) {
+        if (!mainForm) return;
+        mainForm.querySelectorAll('input[name="action"]').forEach(el => el.remove());
+        mainForm.querySelectorAll('input[name="remarks"]').forEach(el => el.remove());
+        const a = document.createElement('input');
+        a.type = 'hidden'; a.name = 'action'; a.value = 'approve';
+        mainForm.appendChild(a);
+        if (remarks) {
+            const r = document.createElement('input');
+            r.type = 'hidden'; r.name = 'remarks'; r.value = remarks;
+            mainForm.appendChild(r);
+        }
+        mainForm.submit();
+    }
+
+    function injectHiddenInput(name, value) {
+        if (!mainForm) return;
+        mainForm.querySelectorAll(`input[name="${name}"]`).forEach(el => el.remove());
+        const input = document.createElement('input');
+        input.type = 'hidden'; input.name = name; input.value = value;
+        mainForm.appendChild(input);
+    }
+});
+</script>
+
+<script>
+// GLOBAL FUNCTIONS — reject and resubmit
+function submitRejectWithRemarks() {
+    const remarks = document.getElementById('reject_remarks_field').value.trim();
+    const mainForm = document.getElementById('masterActionForm');
+
+    if (!remarks) {
+        alert("Please enter a rejection reason. Remarks are mandatory for rejection.");
+        document.getElementById('reject_remarks_field').focus();
+        return;
+    }
+
+    if (!mainForm) {
+        alert("Form not found. Please refresh the page.");
+        return;
+    }
+
+    // Remove any existing action/remarks inputs
+    mainForm.querySelectorAll('input[name="action"]').forEach(el => el.remove());
+    mainForm.querySelectorAll('input[name="remarks"]').forEach(el => el.remove());
+
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = 'reject';
+    mainForm.appendChild(actionInput);
+
+    const remarksInput = document.createElement('input');
+    remarksInput.type = 'hidden';
+    remarksInput.name = 'remarks';
+    remarksInput.value = remarks;
+    mainForm.appendChild(remarksInput);
+
+    // Close modal first, then submit
+    const rejectModalEl = document.getElementById('rejectModal');
+    const rejectModal = bootstrap.Modal.getInstance(rejectModalEl);
+    if (rejectModal) rejectModal.hide();
+
+    setTimeout(() => { mainForm.submit(); }, 200);
+}
+
+function submitResubmit() {
+    const remarks = document.getElementById('resubmit_remarks').value.trim();
+    const mainForm = document.getElementById('masterActionForm');
+
+    if (!remarks) {
+        alert("Please specify what documents or changes are required.");
+        document.getElementById('resubmit_remarks').focus();
+        return;
+    }
+
+    if (!mainForm) {
+        alert("Form not found. Please refresh the page.");
+        return;
+    }
+
+    mainForm.querySelectorAll('input[name="action"]').forEach(el => el.remove());
+    mainForm.querySelectorAll('input[name="remarks"]').forEach(el => el.remove());
+
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = 'resubmit';
+    mainForm.appendChild(actionInput);
+
+    const remarksInput = document.createElement('input');
+    remarksInput.type = 'hidden';
+    remarksInput.name = 'remarks';
+    remarksInput.value = remarks;
+    mainForm.appendChild(remarksInput);
+
+    const resubmitModalEl = document.getElementById('resubmitModal');
+    const resubmitModal = bootstrap.Modal.getInstance(resubmitModalEl);
+    if (resubmitModal) resubmitModal.hide();
+
+    setTimeout(() => { mainForm.submit(); }, 200);
+}
+</script>
+
+<script>
+// Internal helper for global functions
+function injectHiddenInputInForm(form, name, value) {
+    form.querySelectorAll(`input[name="${name}"]`).forEach(el => el.remove());
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+}
+</script>
+
+<script>
+{% if form.currency_code != 'INR' %}
+(function() {
+    const RATE = parseFloat("{{ form.exchange_rate_used|default:'1' }}");
+    const SYMBOL = "{{ form.currency_symbol }}";
+    const CODE = "{{ form.currency_code }}";
+
+    const approvedInput = document.querySelector('input[name="approved_amount"]');
+    const preview = document.getElementById('local_preview');
+    const note = document.getElementById('local_note');
+
+    function update() {
+        if (!approvedInput || !preview) return;
+        const inr = parseFloat(approvedInput.value);
+        if (!isNaN(inr) && inr > 0 && RATE > 0) {
+            // Show 2 decimal places always e.g. $ 1,150.75 not $ 1,150/-
+            const local = (inr / RATE).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            preview.textContent = SYMBOL + ' ' + local;
+            if (note) note.textContent = `(rate locked at submission: 1 ${CODE} = ₹${RATE.toFixed(4)})`;
+        } else {
+            preview.textContent = '—';
+            if (note) note.textContent = '';
+        }
+    }
+
+    if (approvedInput) {
+        approvedInput.addEventListener('input', update);
+        update(); // Run once on page load to show existing value
+    }
+})();
+{% endif %}
+</script>
+
+<script>
+    $(document).ready(function() {
+        // Initialize the searchable dropdown
+        $('#operator_dept_select').select2({
+            placeholder: "-- Search and Select Department --",
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $('#details') // Ensure it works correctly inside tabs
+        });
+    });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[id^="saveBtn"]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const formId = this.id.replace('saveBtn', '');
+            const form = document.getElementById('actualForm' + formId);
+            const formData = new FormData(form);
+
+            // 1. Start Loading State
+            const originalContent = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+            this.disabled = true;
+
+            fetch("{% url 'save_actual_expenditure' 0 %}".replace('0', formId), {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); 
+                } else {
+                    alert(data.error || 'Failed to save');
+                    // 2. Reset if failed
+                    this.innerHTML = originalContent;
+                    this.disabled = false;
+                }
+            })
+            .catch(() => {
+                alert('Network error');
+                this.innerHTML = originalContent;
+                this.disabled = false;
+            });
+        });
+    });
+});
+</script>
+
+<script>
+$('#uploadForm').on('submit', function(e) {
+    e.preventDefault();
+    var formData = new FormData(this);
+    $('#uploadProgressBar').show();
+
+    $.ajax({
+        xhr: function() {
+            var xhr = new window.XMLHttpRequest();
+            xhr.upload.addEventListener("progress", function(evt) {
+                if (evt.lengthComputable) {
+                    var percentComplete = (evt.loaded / evt.total) * 100;
+                    $('.progress-bar').css('width', percentComplete + '%');
+                }
+            }, false);
+            return xhr;
+        },
+        url: $(this).attr('action'),
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function() {
+            location.reload(); // Reload once finished
+        }
+    });
+});
+</script>
+
+<script>
+/* JavaScript to Enable/Disable Upload Button Based on Checklist */
+document.addEventListener('DOMContentLoaded', function() {
+    const userCheckboxes = document.querySelectorAll('.user-checklist');
+    const userUploadBtn = document.getElementById('btnUploadSubmit');
+    const userFileInput = document.getElementById('userFileInput');
+
+    function validateUploadForm() {
+        // 1. All checkboxes must be checked
+        const areAllChecked = Array.from(userCheckboxes).every(cb => cb.checked);
+        
+        // 2. A file must be selected
+        const isFileSelected = userFileInput.files.length > 0;
+        
+        // Enable button only if both conditions are met
+        userUploadBtn.disabled = !(areAllChecked && isFileSelected);
+    }
+
+    // Attach listeners to checkboxes
+    userCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', validateUploadForm);
+    });
+
+    // Attach listener to file input
+    if (userFileInput) {
+        userFileInput.addEventListener('change', validateUploadForm);
+    }
+});
+</script>
+
+<script>
+/* form_detail.html - Inside <script> block */
+function toggleDiscrepancy(docId) {
+    const box = document.getElementById(`discrepancy_box_${docId}`);
+    const masterCheck = document.getElementById(`master_confirm_${docId}`);
+    // Find the submit button inside this specific verification form
+    const submitBtn = box.closest('form').querySelector('button[type="submit"]');
+    
+    if (box.style.display === "none") {
+        // Switching to ERROR MODE
+        box.style.display = "block";
+        masterCheck.required = false;
+        masterCheck.checked = false;
+        masterCheck.disabled = true;
+        
+        // ✅ UI Change: Make button Red and change text to "Send Back"
+        submitBtn.innerHTML = '<i class="fas fa-undo"></i> Send Back for Revision';
+        submitBtn.className = "btn btn-sm btn-danger w-100 mt-2";
+    } else {
+        // Switching back to VERIFICATION MODE
+        box.style.display = "none";
+        masterCheck.required = true;
+        masterCheck.disabled = false;
+        
+        // ✅ UI Change: Reset button to Blue and "Complete Verification"
+        submitBtn.innerHTML = '<i class="fas fa-check-double"></i> Complete Verification';
+        submitBtn.className = "btn btn-sm btn-primary w-100 mt-2";
+    }
+}
+</script>
+
+<script>
+// Handle standard form submissions (Submit, Re-submit, Approve)
+document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        if (submitBtn && !submitBtn.classList.contains('no-loader')) {
+            // Change button appearance
+            const originalText = submitBtn.innerText.trim();
+            submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Processing...`;
+            submitBtn.disabled = true;
+        }
+    });
+});
+</script>
+
+{% endblock %}

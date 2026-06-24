@@ -1,0 +1,11 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static %}
+
+{% block search %}
+  <div style="margin: 0 0 20px 0; padding: 15px; background: #fffacd; border: 2px solid #ffc107; border-radius: 5px; display: flex; gap: 10px; flex-wrap: wrap;">
+    <a href="{% url 'admin:center_export_sample' %}?format=csv" class="button" style="background-color: #28a745; border-color: #28a745; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">📥 Download CSV Sample</a>
+    <a href="{% url 'admin:center_export_sample' %}?format=xlsx" class="button" style="background-color: #28a745; border-color: #28a745; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">📥 Download XLSX Sample</a>
+    <a href="{% url 'admin:center_import' %}" class="button" style="background-color: #007bff; border-color: #007bff; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">⬆️ Import CSV/XLSX</a>
+  </div>
+  {{ block.super }}
+{% endblock %}

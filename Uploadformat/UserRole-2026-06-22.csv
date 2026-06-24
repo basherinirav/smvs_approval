@@ -1,0 +1,16 @@
+Id,User Username,Role,Department Name,Center Name,Mobile Number,Access Rights,Is Active
+41,Nirav,mk_sabhya,BN-IT,,+919925242806,C:0 D:4,True
+28,dummy,end_user,Samarpan Karyalay,,,C:0 D:0,True
+14,hsp,core_member,Core Member,,,C:0 D:0,True
+13,hip,mk_sabhya,,New Jercy,,C:0 D:0,True
+11,pps,mk_sant,Core Member,,,C:0 D:0,True
+10,hns,mk_sabhya,Core Member,,,C:0 D:0,True
+9,department,end_user,AVD,,,C:0 D:0,True
+8,itd,third_party,IT,,,C:0 D:0,True
+7,guruji,hdh_guruji,Core Member,,,C:105 D:49,True
+6,operator,operator,Core Member,,,C:0 D:0,True
+5,mukhyasant,p_rajipaswami,Core Member,,,C:105 D:49,True
+4,mksant,mk_sant,Core Member,,,C:3 D:1,True
+3,mksabhya,mk_sabhya,Core Member,,+919925242806,C:0 D:0,True
+2,center,end_user,,Vasna,+919998469102,C:0 D:1,True
+1,admin,core_member,Core Member,,+919925242806,C:0 D:0,True

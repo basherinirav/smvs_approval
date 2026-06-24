@@ -1,0 +1,552 @@
+{% extends 'base.html' %}
+
+{% load humanize %}
+
+{% block title %}Prabhari Oversight Report{% endblock %}
+
+{% block extra_css %}
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    /* Styling to match your Bootstrap theme */
+    .select2-container--default .select2-selection--single, 
+    .select2-container--default .select2-selection--multiple {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        min-height: 31px;
+    }
+    .select2-container .select2-selection--multiple .select2-selection__choice {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        font-size: 0.75rem;
+    }
+
+    /* Prevent checkbox dropdown from closing when clicking labels */
+    .dropdown-menu .form-check {
+        padding: 0.25rem 1.5rem;
+        margin: 0;
+    }
+    .dropdown-menu .form-check:hover {
+        background-color: #f8f9fa;
+    }
+    /* Ensure the Year button matches standard input height */
+    .btn-white {
+        background-color: #fff;
+        border-color: #dee2e6;
+        height: 31px;
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+    /* Force the filter row container to take stacking priority over the table header */
+    .row.mb-3, .filter-form-container, .card.mb-4 {
+        position: relative;
+        z-index: 1050 !important; /* Higher than the table header's index */
+    }
+
+    /* Target the dropdown menu lists specifically so they overlay over everything */
+    .dropdown-menu, .select2-container, select.form-control {
+        position: relative;
+        z-index: 1060 !important;
+    }
+    
+    /* Ensure the table header stays behind the active menu selections */
+    .table thead th, .table-responsive {
+        position: relative;
+        z-index: 1; /* Keep it grounded below your filter inputs */
+    }
+
+@media print {
+    /* Hide the Navbar and Page navigation */
+    .navbar, 
+    nav[aria-label="Page navigation"],
+    #footer
+    .d-print-none, 
+    .action-col { 
+        display: none !important; 
+    }
+
+    /* Professional Print Adjustments */
+    @page {
+        size: landscape;
+        margin: 1cm;
+    }
+
+    body {
+        background-color: white !important;
+        padding: 0 !important;
+        color: black !important; 
+    }
+
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* ✅ FORCE TABLE CARD TO BE VISIBLE IN PRINT MODE */
+    .card.print-table-container {
+        display: block !important;
+        border: 1px solid #dee2e6 !important;
+        box-shadow: none !important;
+        margin-top: 20px !important;
+    }
+
+    /* Ensure table header is readable (not solid black) */
+    .table-dark {
+        background-color: #f8f9fa !important;
+        color: black !important;
+    }
+        
+    .table-dark th {
+        border-bottom: 2px solid #333 !important;
+        color: black !important;
+        background-color: #f8f9fa !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Force the print header to be centered */
+    .d-print-block {
+        display: block !important;
+        width: 100% !important;
+        text-align: center !important;
+    }
+
+    /* Ensure the 'As on' line looks like a professional sub-header */
+    #print-local-time {
+        font-family: 'Courier New', Courier, monospace;
+        font-weight: bold;
+    }
+
+    /* Force the table and its container to be visible */
+    .table-responsive {
+        overflow: visible !important;
+        display: block !important;
+    }
+    
+    .table {
+        display: table !important;
+        width: 100% !important;
+        border: 1px solid #dee2e6 !important;
+    }
+
+    /* Show Summary Cards */
+    .row.g-3.mb-4 {
+        display: flex !important;
+        flex-wrap: wrap !important;
+    }
+
+    .col-md-3 {
+        flex: 0 0 25% !important;
+        max-width: 25% !important;
+        padding: 5px !important; 
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="mt-4">
+
+    <div class="d-none d-print-block mb-4 text-center">
+        <h2 class="fw-bold mb-1">SMVS Approval System</h2>
+        <h4 class="text-primary mb-2">Prabhari Oversight Report</h4>
+
+        <div class="mb-2">
+            <h5 class="fw-bold text-dark">Prabhari: {{ request.user.get_full_name|default:request.user.username }}</h5> 
+            <p class="mb-0 fw-semibold text-muted">Notes: Consolidated summary of all allotted Centers and Departments.</p>
+            <p class="small text-muted">This report is strictly for internal administrative review.</p>
+        </div> 
+
+        <div class="border-top border-bottom py-1 mt-2">
+            <span class="fw-bold">As on: </span>
+            <span id="print-local-time"></span>
+        </div>
+    </div>
+
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+        <div>
+            <h2><i class="fas fa-chart-line text-primary"></i> Approval Summary Report for {{ request.user.get_full_name|default:request.user.username }}</h2>
+            <p class="text-muted">Consolidated view of your Center and Department requests</p>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-success" onclick="window.print()">
+                <i class="fas fa-print"></i> Print Report
+            </button>
+            <!-- Add your Export to Excel link here later -->
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white shadow-sm h-100">
+                <div class="card-body text-center p-2">
+                    <h6 class="small mb-1">Total Requests</h6>
+                    <h3 class="mb-0">{{ total_requests }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+        <div class="card bg-secondary text-white shadow-sm h-100">
+            <div class="card-body text-center p-2">
+                    <h6 class="small mb-1">Draft Forms</h6>
+                    <h3 class="mb-0">{{ draft_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark shadow-sm h-100">
+                <div class="card-body text-center p-2">
+                    <h6 class="small mb-1">Pending Forms</h6>
+                    <h3 class="mb-0">{{ pending_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white shadow-sm h-100">
+                <div class="card-body text-center p-2">
+                    <h6 class="small mb-1">Revision Requested</h6>
+                    <h3 class="mb-0">{{ revision_count }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-danger text-white shadow-sm h-100">
+                <div class="card-body text-center p-2">
+                    <h6 class="small mb-1">Rejected Forms</h6>
+                    <h3 class="mb-0">{{ rejected_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white shadow-sm h-100">
+                <div class="card-body text-center p-2">
+                    <h6 class="small mb-1">Approved Forms</h6>
+                    <h3 class="mb-0">{{ approved_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success shadow-sm h-100">
+                <div class="card-body text-center p-2">
+                    <h6 class="small text-success fw-bold mb-1">Active Departments</h6>
+                    <h3 class="mb-0 text-success">{{ active_depts_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-primary shadow-sm h-100">
+                <div class="card-body text-center p-2">
+                    <h6 class="small text-primary fw-bold mb-1">Active Centers</h6>
+                    <h3 class="mb-0 text-primary">{{ active_centers_count }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Filter Bar -->
+    <div class="card mb-4 border-0 shadow-sm d-print-none">
+        <div class="card-body bg-light rounded py-2">
+            <form method="GET" class="row g-2 align-items-end">
+                
+                <!-- Multiple Year Filter (Dynamic) -->
+                <div class="col-md-2">
+                    <label class="small fw-bold mb-1">Country / Currency</label>
+                    <select name="currency" class="form-select form-select-sm select2">
+                        <option value="">All Countries / Currencies</option>
+                        {% for curr in dynamic_currencies %}
+                            <option value="{{ curr.currency_code }}" {% if request.GET.currency == curr.currency_code %}selected{% endif %}>
+                                {{ curr.currency_code }} ({{ curr.currency_symbol }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-1">
+                    <label class="small fw-bold mb-1">Years</label>
+                    <div class="dropdown">
+                        <button class="btn btn-white btn-sm w-100 border d-flex justify-content-between align-items-center dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Select Years
+                        </button>
+                        <div class="dropdown-menu p-3 shadow-sm"> 
+                            {% for y in years %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="year" value="{{ y|stringformat:'i' }}" id="year_{{ y|stringformat:'i' }}"
+                                        {% if y|stringformat:"i" in selected_years %}checked{% endif %}>
+                                <label class="form-check-label small" for="year_{{ y|stringformat:'i' }}">{{ y|stringformat:"i" }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>    
+                    </div>
+                </div> 
+
+                <!-- Zone Filter -->
+                <div class="col-md-2">
+                    <label class="small fw-bold mb-1">Zone</label>
+                    <select name="zone" class="form-select form-select-sm select2">
+                        <option value="">All Zones</option>
+               	            {% for zone_name in assigned_zones %}
+                            <option value="{{ zone_name }}" {% if request.GET.zone == zone_name %}selected{% endif %}>{{ zone_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Searchable Center Filter (Restricted to Allotted Only) -->
+                <div class="col-md-2">
+                    <label class="small fw-bold mb-1">Center</label>
+                    <select name="center" class="form-select form-select-sm select2">
+                        <option value="">All Allotted Centers</option>
+                        {% for c in assigned_centers %}
+                            <option value="{{ c.id }}" {% if request.GET.center == c.id|stringformat:"i" %}selected{% endif %}>{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Searchable Department Filter (Restricted to Allotted Only) -->
+                <div class="col-md-2">
+                    <label class="small fw-bold mb-1">Department</label>
+                    <select name="dept" class="form-select form-select-sm select2">
+                        <option value="">All Allotted Depts</option>
+                        {% for d in assigned_depts %}
+                            <option value="{{ d.id }}" {% if request.GET.dept == d.id|stringformat:"i" %}selected{% endif %}>{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="col-md-1">
+                    <label class="small fw-bold mb-1">Status</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">All Status</option>
+                        <option value="initiated" {% if request.GET.status == 'initiated' %}selected{% endif %}>Initiated</option>
+                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending Approval</option>
+                        <option value="revision" {% if request.GET.status == 'revision' %}selected{% endif %}>Revision Pending</option>
+                        <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>Approved</option>
+                        <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                    </select>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                        <i class="fas fa-filter me-1"></i> Filter
+                    </button>
+                    <a href="{% url 'prabhari_report_view' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-undo"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Report Table -->
+    <div class="card shadow-sm mt-4 print-table-container">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle table-bordered mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="text-center align-middle">Form No.</th>
+                        <th class="text-center align-middle">Initiate Date</th>
+                        <th class="text-center align-middle">Initiated By</th>
+                        <th class="text-center align-middle">Subject</th>
+                        <th class="text-center align-middle">Requested Amount</th>
+                        <th class="text-center align-middle">Current Status</th>
+                        <th class="text-center align-middle">Final Approver</th>
+                        <th class="text-center align-middle">Approved Date</th>
+                        <th class="text-center align-middle">Approved Amount</th>
+                        <th class="text-center align-middle d-print-none">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for form in page_obj %}
+                    <tr>
+                        <td class="text-center fw-bold">{{ form.form_number }}</td>
+
+                        <td class="text-center small">
+                            {{ form.created_at|date:"d-m-Y" }}
+                            <br>
+                            <span class="text-muted">{{ form.created_at|date:"h:i A" }}</span>
+                         </td>
+
+                        <td>
+                            <!-- Primary Initiator -->
+                            <div class="fw-bold text-dark">
+                                {% if form.selected_center %}
+                                    <i class="fas fa-building me-1 text-muted"></i>{{ form.selected_center.name }}
+                                {% elif form.center %}
+                                    <i class="fas fa-building me-1 text-muted"></i>{{ form.center.name }}
+                                {% else %}
+                                    <i class="fas fa-sitemap me-1 text-muted"></i>{{ form.department.name|default:"General" }}
+                                {% endif %}
+                            </div>
+
+                            <!-- Secondary Info: Show Dept only if a Center initiated it -->
+                            {% if form.selected_center or form.center %}
+                                <div class="small text-muted mt-1">
+                                    <strong>Dept:</strong> {{ form.department.name|default:"-" }}
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ form.subject|truncatechars:40 }}</td>
+
+                        <td class="text-end fw-bold text-primary">
+                            {% if form.currency_code and form.currency_code != 'INR' %}
+                                <span style="font-size:0.95rem;">{{ form.currency_symbol }}{{ form.amount|intcomma }}</span>
+                                <br>
+                                <small class="text-muted fw-normal" style="font-size: 0.73rem; display: block; margin-top: 2px;">
+                                    (≈ ₹{{ form.amount_inr|intcomma }})
+                                </small>
+                            {% else %}
+                                ₹{{ form.amount|intcomma }}
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">
+                            {% if form.status == 'approved' %}
+                                <span class="badge bg-success">Approved</span>
+                            {% elif form.status == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% elif form.status == 'revision_pending' %}
+                                <span class="badge bg-warning text-dark">Revision Pending</span>
+                            {% else %}
+                                <span class="badge bg-info">{{ form.status|title }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center small">
+                            {% if form.status == 'approved' or form.status == 'rejected' %}
+                                {% with last_action=form.actions.all.first %}
+                                    {% if last_action %}   
+                                        <strong>{{ last_action.actor.get_full_name|default:last_action.actor.username }}</strong>                                    
+                                        {% if last_action.approval_level %}
+                                            <br><span class="text-muted">({{ last_action.approval_level.level_name }})</span>
+                                        {% endif %}
+                                    {% endif %} 
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center small">
+                            {% if form.status == 'approved' and form.approved_at %}
+                                {{ form.approved_at|date:"d-m-Y" }}
+                                <br>
+                                <span class="text-muted">{{ form.approved_at|date:"h:i A" }}</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="text-end fw-bold">
+                            {% if form.status == 'approved' %}
+                                {% if form.currency_code and form.currency_code != 'INR' and form.approved_amount_local %}
+                                    <span class="{% if form.approved_amount < form.amount_inr %}text-danger{% else %}text-success{% endif %}" style="font-size:0.95rem;">
+                                        {{ form.currency_symbol }}{{ form.approved_amount_local|intcomma }}
+                                    </span>
+                                    <br>
+                                    <small class="text-muted fw-normal" style="font-size: 0.73rem; display: block; margin-top: 2px;">
+                                        (≈ ₹{{ form.approved_amount|floatformat:2|intcomma }})
+                                    </small>
+                                {% else %}
+                                    <span class="{% if form.approved_amount < form.amount_inr %}text-danger{% else %}text-success{% endif %}">
+                                        ₹{{ form.approved_amount|floatformat:2|intcomma }}   
+                                    </span>       
+                                {% endif %}
+                            {% elif form.status == 'rejected' %}
+                                <span class="text-muted">₹0.00</span>
+                            {% elif form.status == 'revision_pending' %}
+                                <span class="badge bg-light text-dark border">Pending</span>
+                            {% else %}
+                                <span class="text-muted small">Pending</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center d-print-none">
+                            <a href="{% url 'form_detail' form.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4 text-muted">No records found for this report.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <nav aria-label="Page navigation" class="mt-4 d-print-none">
+        <ul class="pagination justify-content-center"> 
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.urlencode %}&{{ request.GET.urlencode|cut:'page=' }}{% endif %}">&laquo; First</a>   
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode|cut:'page=' }}{% endif %}">Previous</a>   
+                </li>
+            {% endif %}  
+            <li class="page-item disabled">
+                <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            </li>  
+            {% if page_obj.has_next %}
+                <li class="page-item"> 
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode|cut:'page=' }}{% endif %}">Next</a>  
+                </li>
+                <li class="page-item">  
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.urlencode %}&{{ request.GET.urlencode|cut:'page=' }}{% endif %}">Last &raquo;</a> 
+                </li>
+             {% endif %}
+        </ul>
+    </nav>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Keep checkbox dropdown open during selection
+        $('.dropdown-menu').on('click', function(e) {
+            e.stopPropagation();
+        });
+
+        // Initialize Select2 on all elements with the .select2 class
+        $('select.select2').select2({
+            placeholder: "Select options",
+            allowClear: true,
+            width: '100%'
+        });
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        function updatePrintTime() {
+            const now = new Date();
+            const date = now.toLocaleDateString('en-GB', { 
+                day: '2-digit', month: '2-digit', year: 'numeric' 
+            });
+            const time = now.toLocaleTimeString('en-GB', { 
+                hour: '2-digit', minute: '2-digit', hour12: true 
+            });
+            
+            const element = document.getElementById('print-local-time');
+            if (element) element.textContent = date + " " + time;
+        }
+
+        updatePrintTime();
+        
+        // Also update time immediately if user hits Ctrl+P
+        window.onbeforeprint = updatePrintTime;
+    });
+</script>
+{% endblock %}

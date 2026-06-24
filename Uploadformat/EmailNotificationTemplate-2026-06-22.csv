@@ -1,0 +1,296 @@
+id,template_name,event_type,subject,body,approval_link_text,is_active
+11,[WKF-05] Amount Changed Notification (To Previous Approvers),amount_changed_notify_approvers,Amount Changed in Final Approval - {{ form.form_number }},"Jay Swaminarayan {{ approver_name }},<br><br>
+
+Please be informed that the final approver has changed the final approved amount for form <b>{{ form.form_number }}</b> - ""{{ form.subject }}"".<br><br>
+
+<b>Requested Amount</b>: ₹{{ form.amount|floatformat:2 }}<br>
+<b>Final Approved Amount</b>: <b style=""color: #2e7d32;"">₹{{ form.approved_amount|floatformat:2 }}</b><br><br>
+
+<b>Reason provided by Final Approver</b>:<br>
+{{ remarks|linebreaks }}<br><br>
+
+This is for your information.<br><br>
+
+Best regards,<br>
+SMVS Approval Team",Click here to view and approve the form,1
+3,[DLG-01] Internal Delegation to 3rd Party,delegated,Form Delegated to You - {{ form.form_number }},"Jay Swaminarayan {{ recipient_name|default:""Sir/Madam"" }},<br><br>
+
+An approval request has been delegated to you for verification of Manjuripatra.<br><br>
+
+<b>Form Number</b>: {{ form.form_number }}<br>
+<b>Subject</b>: {{ form.subject }}<br>
+<b>Amount</b>: ₹{{ form.amount }}<br>
+<b>Delegated By</b>: {{ delegating_user.get_full_name|default:delegating_user.username }}<br>
+<b>Remarks</b>: <i>{{ reason|default:""No remarks provided"" }}</i><br><br>
+
+Please review the form and provide your comments or remarks if any through comment tab.<br><br>
+
+{% if login_url %}
+<a href=""{{ login_url }}"" style=""background-color: #1a73e8; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;"">
+    View / Approve Form
+</a><br><br>
+{% endif %}
+
+Regards,<br>
+SMVS Approval Team",Click here to view and approve the form,1
+7,[DLG-07] Delegation Formally Returned,delegation_returned,3rd Party Verification Completed - {{ form.form_number }},"Dear {{ delegating_user.get_full_name|default:delegating_user.username }},<br><br>
+
+The 3rd Party Verifier has completed their review and returned the form.<br><br>
+
+<b>Form Number</b>: {{ form.form_number }}<br>
+<b>Subject</b>: {{ form.subject }}<br>
+<b>Amount</b>: ₹{{ form.amount }}<br>
+<b>Verified By</b>: {{ verifier.get_full_name|default:verifier.username }}<br>
+<b>Remarks</b>: <i>{{ remarks|default:""No remarks provided"" }}</i><br><br>
+
+The form is now back with you for further action.<br><br>
+
+<a href=""{{ login_url }}"" style=""background-color: #1a73e8; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;"">
+    View Form and Take Action
+</a><br><br>
+
+Regards,<br>
+SMVS Approval System",Click here to view and approve the form,1
+8,[DLG-02] External Delegation to Guest Email,external_delegated,Approval Request Delegated to You - {{ form.form_number }},"Dear Sir/Madam,<br><br>
+
+You have been delegated an important approval request for review by <b>{{ delegating_user.get_full_name|default:delegating_user.username }}</b>.<br><br>
+
+<b>Form Details:</b><br>
+<ul>
+    <li><b>Form Number</b>: {{ form.form_number }}</li>
+    <li><b>Subject</b>: {{ form.subject }}</li>
+    <li><b>Amount</b>: ₹{{ form.amount }}</li>
+    <li><b>Remarks from delegator</b>: <i>{{ reason|default:""No remarks provided"" }}</i></li>
+</ul><br>
+
+Please click the secure link below to review the complete form, documents, and take action (Approve / Reject / Add Comments):<br><br>
+
+<a href=""{{ login_url }}"" style=""background-color: #2e7d32; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">
+    Review and Take Action
+</a><br><br>
+
+<small style=""color: #666;"">This link is valid for a limited time and is secure for your review only.</small><br><br>
+
+<b>After reviewing, you can:</b>
+<ul>
+    <li>Approve the request</li>
+    <li>Reject the request with remarks</li>
+    <li>Add your comments</li>
+</ul><br>
+
+Thank you for your valuable time and support.<br><br>
+
+Regards,<br>
+SMVS Approval System",Click here to view and approve the form,1
+9,[DLG-08] External Delegation Reply Received,external_delegation_reply,Response Received for Delegated Form - {{ form.form_number }},"Dear {{ delegating_user.get_full_name|default:delegating_user.username }},<br><br>
+
+The external reviewer has responded to the delegated approval request.<br><br>
+
+<b>Form Number</b>: {{ form.form_number }}<br>
+<b>Subject</b>: {{ form.subject }}<br>
+<b>Response</b>: <b style=""color: {% if decision == 'approved' %}#2e7d32{% else %}#d93025{% endif %};"">{{ decision|upper }}</b><br>
+<b>Remarks</b>: <i>{{ remarks|default:""No remarks provided"" }}</i><br><br>
+
+The form has been updated and is now back in your workflow.<br><br>
+
+You can view the latest status here:<br>
+<a href=""{{ login_url }}"" style=""color: #1a73e8; font-weight: bold; text-decoration: underline;"">
+    View Updated Form
+</a><br><br>
+
+Regards,<br>
+SMVS Approval System",Click here to view and approve the form,1
+2,[WKF-03] Final Approval Completed,final_approved,Form Final Approved - {{ form.form_number }},"Jay Swaminarayan {{ user.get_full_name|default:user.username }},<br><br>
+
+Your Manjuripatra approval request has been <b>FINAL APPROVED</b>.<br><br>
+
+<b>Form Number</b>: {{ form.form_number }}<br>
+<b>Subject</b>: {{ form.subject }}<br>
+<b>Requested Amount</b>: ₹{{ form.amount|floatformat:2 }}<br>
+<b>Final Approved Amount</b>: <b style=""color: #2e7d32;"">₹{{ form.approved_amount|floatformat:2 }}</b><br><br>
+
+Process of your Approval form is now complete.<br><br>
+
+<a href=""{{ login_url }}"" style=""color: #1a73e8; font-weight: bold; text-decoration: underline;"">
+    View Approved Form Details
+</a><br><br>
+
+Regards,<br>
+SMVS Approval Team",Click here to view and approve the form,1
+10,[WKF-04] Final Approval with Amount Change (To Submitter),final_approved_amount_changed,Amount Modified & Final Approved - {{ form.form_number }},"Jay Swaminarayan {{ submitter_name }},<br><br>
+
+Your approval request for form no. <b>{{ form.form_number }}</b> - ""{{ form.subject }}"" has been <b>FINAL APPROVED</b> with a <b>modified amount</b>.<br><br>
+
+<b>Requested Amount</b>: ₹{{ form.amount|floatformat:2 }}<br>
+<b>Final Approved Amount</b>: <b style=""color: #d93025;"">₹{{ form.approved_amount|floatformat:2 }}</b><br><br>
+
+<b>Reason given by Final Approver</b>:<br>
+{{ remarks|linebreaks }}<br><br>
+
+This is a special notification because the final approved amount differs from the originally requested amount.<br><br>
+
+<a href=""{{ form_detail_link }}"" style=""color: #1a73e8; font-weight: bold;"">View full details here</a><br><br>
+
+Best regards,<br>
+SMVS Approval Team",Click here to view and approve the form,1
+4,[FRM-01] Form Successfully Submitted,form_submitted,Your Approval Request Submitted Successfully - {{ form.form_number }},"Dear {{ submitted_by.get_full_name|default:submitted_by.username }},<br><br>
+
+Your approval request has been successfully submitted.<br><br>
+
+<b>Form Number</b>: {{ form.form_number }}<br>
+<b>Subject</b>: {{ form.subject }}<br>
+<b>Amount</b>: ₹{{ form.amount }}<br>
+<b>Department</b>: {{ form.department.name|default:""N/A"" }}<br>
+<b>Center</b>: {{ form.center.name|default:""N/A"" }}<br><br>
+
+The form is now under review and will be processed according to the approval workflow.<br><br>
+To view the current approval status of your Manjuripatra form, kindly check the Approval Flow Tab in the view.<br><br>
+
+<a href=""{{ login_url }}"" style=""color: #1a73e8; font-weight: bold;"">View Form Details</a><br><br>
+
+Regards,<br>
+SMVS Approval System",Click here to view and approve the form,1
+12,[REG-05] Internal New User Registered Awaiting Approval of Admin,new_user_registered,SMVS Approval User Alert: New User Registration from {{ username }} ({% if center_name %}{{ center_name }}{% else %}{{ department_name }}{% endif %}),"Dear Admin,<br><br>
+
+A below mention new user registration is <b>PENDING FOR YOUR APPROVAL</b>.<br><br>
+
+<b>Username</b>: {{ username }}<br>
+<b>Full Name</b>: {{ first_name }} {{ last_name }}<br>
+<b>Registered Email ID</b>: {{ registered_email }}<br>
+<b>Initiated From</b>: 
+    {% if center_name %}
+        {{ center_name }} (Center)
+    {% else %}
+        {{ department_name|default:""General"" }} (Department)
+    {% endif %}<br>
+<b>Mobile No.</b>: {{ mobile_number }}<br>
+<b>All Selected Workspaces</b>: {{ selected_departments }}<br><br>
+
+Please review and approve the request to activate this user.<br><br>
+
+<a href=""{{ admin_url }}"" style=""color: #1a73e8; font-weight: bold; text-decoration: underline;"">
+    View Registration Details in Admin Panel
+</a><br><br>
+
+Regards,<br>
+SMVS Approval System",Click here to view and approve the form,1
+13,[SYS-01] Password Reset OTP Transmission,otp_sent,OTP for password reset of SMVS Approval System,"Dear {{ user.get_full_name|default:user.username }},<br><br>
+
+Your requested OTP for password reset is: <b>{{ otp }}</b>.<br><br>
+
+This code is valid for 10 minutes. If you did not request this, please ignore this email.<br><br>
+
+<a href=""{{ login_url }}"" style=""color: #1a73e8; font-weight: bold; text-decoration: underline;"">
+    Login to SMVS Approval System
+</a><br><br>
+
+Regards,<br>
+SMVS Approval System",Click here to view and approve the form,1
+1,[WKF-01] Pending Approval (Forwarded to Next Level),pending_approval,Approval Required - {{ form.form_number }},"Jay Swaminarayan {{ user.get_full_name|default:user.username }},<br><br>
+
+A new Manjuripatra approval request requires your attention.<br><br>
+
+<b>Form Number</b>: {{ form.form_number }}<br>
+<b>Subject</b>: {{ form.subject }}<br>
+<b>Amount</b>: ₹{{ form.amount }}<br>
+<b>Status</b>: {{ form.get_status_display|default:""Pending"" }}<br><br>
+
+Please review the said approval form & take necessary action by Login through below link.<br><br>
+
+<a href=""{{ login_url }}"" style=""color: #1a73e8; font-weight: bold; text-decoration: underline;"">
+    {{ approval_link_text }}
+</a><br><br>
+
+Regards,<br>
+SMVS Approval Team",LOGIN TO VIEW FORM,1
+16,[REG-01] External User Pending Local Center Leader Review,reg_leader_pending,Action Required: Verify Center User Registration Request — {{ username }},"Dear Center Leader / Department Head,<br><br>
+
+A new external registration application is <b>AWAITING YOUR LOCAL VERIFICATION CHECK</b> before escalating to system admins.<br><br>
+
+<b>Requested Username</b>: {{ username }}<br>
+<b>Applicant Full Name</b>: {{ first_name }} {{ last_name }}<br>
+<b>Target Workspace Segment</b>: 
+    {% if center_name %}
+        {{ center_name }} (Center Workspace)
+    {% else %}
+        {{ department_name|default:""General"" }} (Department Workspace)
+    {% endif %}<br>
+<b>Contact Mobile No.</b>: {{ mobile_number }}<br><br>
+
+Kindly sign into the administrative gateway to confirm this applicant's workspace authorization alignment.<br><br>
+
+<a href=""{{ admin_url }}"" style=""color: #1a73e8; font-weight: bold; text-decoration: underline;"">
+    Access Verification Dashboard Portal Gateway
+</a><br><br>
+
+Regards,<br>
+SMVS Approval System",Click here to view and approve the form,1
+14,[REG-03] User Account Activated successfully,reg_user_activated,Successfully Activation of User for SMVS Approval System,"Dear {{ user.get_full_name|default:user.username }},<br><br>
+
+Your user account access for Manjuripatra Approval System has been <b>SUCCESSFULLY ACTIVATED</b> by the system administrator.<br><br>
+
+<b>Username Profile</b>: {{ user.username }}<br>
+
+{# 🟢 DYNAMIC LABEL SWAP: Renders the precise string name header conditionally #}
+{% if user_role.center %}
+    <b>Center</b>: {{ user_role.center.name }}
+{% else %}
+    <b>Department</b>: {{ user_role.department.name|default:""General"" }}
+{% endif %}<br><br>
+
+You are now permitted to log into the Approval system using your registered credentials.<br><br>
+
+<a href=""{{ login_url }}"" style=""background-color: #1a73e8; color: white; padding: 10px 18px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block;"">
+    Access Portal Login Gateway
+</a><br><br>
+
+Regards,<br>
+SMVS Approval System",Click here to view and approve the form,1
+15,[REG-04] User Account Registration Declined,reg_user_declined,SMVS Approval Access Registration Declined — {{ user.username }},"Jay Swaminarayan,<br><br>
+
+Your registration request for an access workspace account on the <b>SMVS Approval System</b> has been reviewed and declined by the system administrator.<br><br>
+
+<b>Profile Username</b>: {{ user.username }}<br>
+<b>Associated Email Handle</b>: {{ user.email }}<br>
+<b>Status</b>: Registration Request Denied / Declined<br><br>
+
+If you believe this decision is a configuration mismatch or if you need to resubmit your onboarding parameters with updated sector assignments, kindly reach out directly to your local Center Leader or Department Head.<br><br>
+
+Regards,<br>
+SMVS Approval System",Click here to view and approve the form,1
+5,[WKF-06] Form Permanently Rejected,rejected,Your Approval Request Has Been Rejected - {{ form.form_number }},"Dear {{ submitted_by.get_full_name|default:submitted_by.username }},<br><br>
+
+Your approval request has been <b style=""color: #d93025;"">REJECTED</b>.<br><br>
+
+<b>Form Number</b>: {{ form.form_number }}<br>
+<b>Subject</b>: {{ form.subject }}<br>
+<b>Amount</b>: ₹{{ form.amount }}<br>
+<b>Rejected By</b>: {{ approver.get_full_name|default:approver.username }}<br>
+<b>Reason</b>: <i>{{ remarks|default:""No reason provided"" }}</i><br><br>
+
+You may submit a new request with necessary changes.<br><br>
+
+<a href=""{{ login_url }}"" style=""color: #1a73e8; font-weight: bold; text-decoration: underline;"">
+    View Rejected Form Details
+</a><br><br>
+
+Regards,<br>
+SMVS Approval System",Click here to view and approve the form,1
+6,[WKF-02] Revision/Resubmission Requested,revision_requested,Revision Requested for Your Approval Form - {{ form.form_number }},"Jay Swaminarayan {{ submitted_by.get_full_name|default:submitted_by.username }},<br><br>
+
+Revision has been requested by the approver for your Approval form.<br><br>
+
+<b>Form Number</b>: {{ form.form_number }}<br>
+<b>Subject</b>: {{ form.subject }}<br>
+<b>Amount</b>: ₹{{ form.amount }}<br>
+<b>Requested By</b>: {{ approver.get_full_name|default:approver.username }}<br>
+<b>Reason</b>: <i style=""color: #d93025;"">{{ remarks|default:""No specific reason provided"" }}</i><br><br>
+
+Please make the necessary changes, upload revised documents if require and resubmit the form.<br><br>
+
+<a href=""{{ login_url }}"" style=""color: #1a73e8; font-weight: bold; text-decoration: underline;"">
+    View and Edit Form
+</a><br><br>
+
+Regards,<br>
+SMVS Approval Team",Click here to view and approve the form,1

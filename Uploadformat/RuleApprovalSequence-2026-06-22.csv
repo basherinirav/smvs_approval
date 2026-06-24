@@ -1,0 +1,34 @@
+id,rule_name,approval_level_name,sequence_order,is_mandatory,allow_delegation,auto_approve_if_conditions_met
+27,Dept >=5 Nirman,Operator,1,1,0,0
+28,Dept >=5 Nirman,Mk Sabhay,2,1,1,0
+29,Dept >=5 Nirman,3rd Party Verifier,3,1,0,0
+30,Dept >=5 Nirman,MK Sant 1,4,1,1,0
+31,Dept >=5 Nirman,MK Sant 2,5,1,1,0
+32,Dept >=5 Nirman,HDH Guruji,6,1,1,0
+22,Dept >2.5,Operator,1,1,0,0
+23,Dept >2.5,Mk Sabhay,2,1,1,0
+24,Dept >2.5,MK Sant 1,3,1,1,0
+25,Dept >2.5,MK Sant 2,4,1,1,0
+26,Dept >2.5,HDH Guruji,5,1,1,0
+18,Dept >.50 <2.5,Operator,1,1,0,0
+19,Dept >.50 <2.5,Mk Sabhay,2,1,1,0
+20,Dept >.50 <2.5,MK Sant 1,3,1,1,0
+21,Dept >.50 <2.5,MK Sant 2,4,1,1,0
+12,Center - Dept,Operator,1,1,0,0
+13,Center - Dept,Mk Sabhay,2,1,1,0
+14,Center - Dept,3rd Party Verifier,3,1,0,0
+15,Center - Dept,MK Sant 1,4,1,1,0
+16,Center - Dept,MK Sant 2,5,1,1,0
+17,Center - Dept,HDH Guruji,6,1,1,0
+7,Center >2.5,Operator,1,1,0,0
+8,Center >2.5,Mk Sabhay,2,1,1,0
+9,Center >2.5,MK Sant 1,3,1,1,0
+10,Center >2.5,MK Sant 2,4,1,1,0
+11,Center >2.5,HDH Guruji,5,1,1,0
+3,Center >1 to <=2.5,Operator,1,1,0,0
+4,Center >1 to <=2.5,Mk Sabhay,2,1,1,0
+5,Center >1 to <=2.5,MK Sant 1,3,1,1,0
+6,Center >1 to <=2.5,MK Sant 2,4,1,1,0
+1,Center >0.50 to <=1,Operator,1,1,0,0
+2,Center >0.50 to <=1,Mk Sabhay,2,1,1,0
+33,Center >0.50 to <=1,MK Sant 1,3,1,0,1

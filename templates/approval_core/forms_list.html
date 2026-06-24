@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+
+{% load humanize %}
+
+{% block title %}{{ title }} - SMVS Approval System{% endblock %}
+
+{% block content %}
+<div class="mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 style="color: var(--primary-color);">
+            <i class="fas fa-list"></i> {{ title }}
+        </h2>
+        <a href="{% url 'forms_list' %}" class="btn btn-outline-primary">
+            <i class="fas fa-sync"></i> Refresh
+        </a>
+    </div>
+
+    <!-- Filter Forms -->
+    <div class="card mt-3">
+        <div class="card-header" style="background-color: var(--primary-color); color: white;">
+            <strong>Filter Forms</strong>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">{{ filter_form.status }}</div>
+                <div class="col-md-3">{{ filter_form.department }}</div>
+                <div class="col-md-2">{{ filter_form.date_from }}</div>
+                <div class="col-md-2">{{ filter_form.date_to }}</div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered align-middle">
+                    <thead style="background-color: var(--primary-color); color: white;">
+                        <tr>
+                            <th class="text-center align-middle">Form No.</th>
+                            {% if not is_end_user %}
+                                <th class="text-center align-middle">Start Date</th>
+                            {% endif %}
+                            <th class="text-center align-middle">Subject</th>
+                            <th class="text-center align-middle">Initiator</th>
+                            <th class="text-center align-middle">Requested Amount</th>
+                            
+                            {% if not is_end_user %}
+                                <!-- Approver Columns -->
+                                <th class="text-center align-middle">My Action</th>
+                                <th class="text-center align-middle">My Action Date & Time</th>
+                                {% if request.user.approval_role.role != "third_party" %}
+                                    <th class="text-center align-middle">Final Approver Remarks</th>
+                                    <th class="text-center align-middle">Last Action By</th>
+                                    <th class="text-center align-middle">Last Action Date</th>
+                                {% endif %}
+                            {% else %}
+                                <!-- End User Columns -->
+                                <th class="text-center align-middle">Submitted Date</th>
+                                <th class="text-center align-middle">Final Approved Date</th>
+                                <th class="text-center align-middle">Comments</th>
+                            {% endif %}
+
+                            {% if request.user.approval_role.role != "third_party" %}    
+                                <th class="text-center align-middle">Current Status</th>
+                                <th class="text-center align-middle">Approved Amount</th>
+                            {% endif %}
+                            <th class="text-center align-middle">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for form in page_obj %}
+                            <tr>
+                                <td class="text-center"><strong><a href="{% url 'form_detail' form.id %}">{{ form.form_number }}</a></strong></td>
+                                {% if not is_end_user %}
+                                    <td class="text-center">{{ form.created_at|date:"d-m-Y H:i A" }}</td>
+                                {% endif %}
+                                <td>{{ form.subject|truncatewords:8 }}</td>
+                                
+                                <!-- Initiated By (Center/Department) -->
+                                <td class="text-center">
+                                    {% if form.center %}
+                                        <div class="fw-bold text-dark">
+                                            <i class="fas fa-building me-1 text-muted"></i>{{ form.center.name }}
+                                        </div>
+                                        {% if form.department %}
+                                             <div class="small text-muted mt-1">
+                                                 {{ form.department.name }}
+                                             </div>
+                                        {% endif %}  
+                                    {% else %}
+                                        <div class="fw-bold text-dark">
+                                            <i class="fas fa-sitemap me-1 text-muted"></i>{{ form.department.name|default:"General" }}
+                                        </div>
+                                        <div class="small text-muted mt-1">
+                                            (Dept. Initiation)
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                
+                                <td class="text-end">
+                                    {% if form.currency_code != 'INR' %}
+                                        {{ form.currency_symbol }}{{ form.amount|floatformat:2|intcomma }}
+                                        <small class="text-muted d-block" style="font-size:0.75rem;">
+                                            ≈ ₹{{ form.amount_inr|floatformat:2|intcomma }}
+                                        </small>
+                                    {% else %}
+                                        ₹{{ form.amount|floatformat:2|intcomma }}
+                                    {% endif %}
+                                </td>
+
+                                {% if not is_end_user %}
+                                    <!-- Approver Columns -->
+                                    <td class="text-center">
+                                        {% if form.my_action %}
+                                            {% if form.my_action.action_type == 'approved' %}
+                                                <span class="badge bg-success">✅ Approved</span>
+                                            {% elif form.my_action.action_type == 'rejected' %}
+                                                <span class="badge bg-danger">❌ Rejected</span>
+                                            {% elif form.my_action.action_type == 'revision_requested' %}
+                                                <span class="badge bg-warning text-dark">🔄 Revision Requested</span>                                            
+                                            {% elif form.my_action.action_type == 'delegated' %}
+                                                <span class="badge bg-info">↪ Delegated</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ form.my_action.get_action_type_display|default:"Action taken" }}</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-info">⏳ Pending at my level</span>
+                                        {% endif %}                                    </td>
+                                    <td class="text-center">
+                                        {% if form.my_action %}
+                                            {{ form.my_action.created_at|date:"d-m-Y H:i A" }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                    {% if request.user.approval_role.role != "third_party" %}
+                                        <td>
+                                            {% if form.status == 'approved' %}
+                                                {% with last_action=form.actions.all.first %}
+                                                    {# Only show if the remark exists and isn't the default "Approved" text #}
+                                                    {% if last_action and last_action.remarks and last_action.remarks != 'Approved' %}
+                                                        {{ last_action.remarks }} 
+                                                    {% else %}
+                                                        <span class>—</span>
+                                                    {% endif %}
+                                                {% endwith %}  
+                                            {% elif form.status == 'rejected' %}
+                                                {% with last_action=form.actions.all.first %}
+                                                    {# Always show the rejection reason #}
+                                                    {% if last_action and last_action.remarks %}                                            
+                                                        <span class="text-danger">{{ last_action.remarks }}</span> 
+                                                    {% else %}
+                                                        <span class>—</span>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            {% else %}                                                
+                                                {# For Draft, In Progress, or Revision Pending #}
+                                                <span class>—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {{ form.dynamic_last_actor|default:"—" }}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if form.latest_action_date %}
+                                                {{ form.latest_action_date|date:"d-m-Y" }}
+                                                <br>
+                                                <span class="text-muted">{{ form.latest_action_date|date:"h:i A" }}</span>
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </td>
+                                    {% endif %}
+                                {% else %}
+                                    <!-- End User Columns -->
+                                    <td class="text-center">{{ form.submitted_at|date:"d-m-Y H:i A"|default:"—" }}</td>
+                                    <td class="text-center">
+                                        {% if form.approved_at %}
+                                            {{ form.approved_at|date:"d-m-Y H:i A" }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if request.user.approval_role.role != "third_party" %} 
+                                            {% if form.status == 'approved' or form.status == 'rejected' %}
+                                                {% with last_action=form.actions.all.first %}
+                                                    {% if last_action and last_action.remarks and last_action.remarks != 'Approved' %}                                         
+                                                        <span class="{% if form.status == 'rejected' %}text-danger{% endif %}">
+                                                            {{ last_action.remarks }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="text-muted">—</span>    
+                                                    {% endif %} 
+                                                {% endwith %}
+                                            {% else %}
+                                                <span class="text-muted">—</span>     
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>         
+                                {% endif %}
+
+                                <!-- Current Status -->
+                                {% if request.user.approval_role.role != "third_party" %}
+                                <td class="text-center">
+                                    {% if form.status == 'approved' %}
+                                        <span class="badge bg-success">✅ Approved</span>
+                                    {% elif form.status == 'rejected' %}
+                                        <span class="badge bg-danger">❌ Rejected</span>
+                                    {% elif form.status == 'revision_pending' %}
+                                        <span class="badge bg-warning text-dark">🟠 Revision Pending</span>
+                                    {% elif form.status == 'initiated' %}
+                                        <span class="badge bg-secondary">📝 Draft</span>
+                                    {% else %}
+                                        <span class="badge bg-info">⏳ Under Process</span>
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+
+                                <!-- Approved Amount -->
+                                {% if request.user.approval_role.role != "third_party" %}
+                                <td class="text-end fw-bold">
+                                    {% if form.status == 'approved' %}
+                                        {% if form.currency_code != 'INR' and form.approved_amount_local %}
+                                            <span class="{% if form.approved_amount < form.amount_inr %}text-danger{% else %}text-success{% endif %}">
+                                                {{ form.currency_symbol }}{{ form.approved_amount_local|floatformat:2|intcomma }}
+                                            </span>
+                                            <small class="text-muted d-block fw-normal" style="font-size:0.75rem; margin-top: 2px;">  
+                                                ≈ ₹{{ form.approved_amount|floatformat:2|intcomma }}
+                                            </small>
+                                        {% else %} 
+                                            <span class="{% if form.approved_amount < form.amount %}text-danger{% else %}text-success{% endif %}">
+                                                ₹{{ form.approved_amount|floatformat:2|intcomma }} 
+                                            </span>
+                                        {% endif %}
+                                    {% elif form.status == 'rejected' %}
+                                        <span class="text-muted">₹0.00</span>
+                                    {% elif form.status == 'revision_pending' %}
+                                        <span class="badge bg-light text-dark border">Pending</span>
+                                    {% else %}
+                                        <span class="text-muted small badge bg-info">Pending</span>
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+
+                                <td>
+                                    <a href="{% url 'form_detail' form.id %}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info text-center py-5">
+                <i class="fas fa-inbox" style="font-size: 4rem; color: #6c757d;"></i>
+                <h4 class="mt-3">No forms found</h4>
+                <p class="text-muted">
+                    {% if is_end_user %}
+                        You have not submitted any forms yet.
+                    {% else %}
+                        No forms are pending at your level or you haven't taken any action yet.
+                    {% endif %}
+                </p>
+            </div>
+        {% endif %}
+    </div>
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-item" href="?page=1{% if request.GET.urlencode %}&{{ request.GET.urlencode|cut:'page=' }}{% endif %}">&laquo; First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode|cut:'page=' }}{% endif %}">Previous</a>
+            </li>
+        {% endif %}
+
+        <li class="page-item disabled">
+            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode|cut:'page=' }}{% endif %}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.urlencode %}&{{ request.GET.urlencode|cut:'page=' }}{% endif %}">Last &raquo;</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+
+</div>
+{% endblock %}

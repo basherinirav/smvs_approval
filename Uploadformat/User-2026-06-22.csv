@@ -1,0 +1,16 @@
+id,username,email,first_name,last_name,Mobile Number,Center,Department,is_active,is_staff,is_superuser,date_joined,last_login
+40,Nirav,nnbasheri@in.smvs.org,Nirav,Basheri,+919925242806,-,BN-IT,1,0,0,2026-06-16 17:41:12,2026-06-16 23:22:01
+1,admin,manjuripatra@in.smvs.org,,,+919925242806,-,Core Member,1,1,1,2026-04-14 17:37:16,2026-06-22 16:39:15
+2,center,exchangecompliance@gmail.com,Mayurbhai,Ganatra,+919998469102,Vasna,-,1,0,0,2026-04-14 17:48:45,2026-06-22 10:33:33
+3,department,,,,-,-,AVD,1,0,0,2026-04-14 17:49:48,2026-06-19 14:40:20
+27,dummy,,,,-,-,Samarpan Karyalay,1,1,0,2026-05-18 10:45:23,2026-05-18 16:29:48
+8,guruji,psk@in.smvs.org,HDH Guruji,,+919925242806,-,Core Member,1,1,0,2026-04-15 09:32:58,2026-05-23 15:49:56
+13,hip,,Himanshubhai,Patel,-,New Jercy,-,1,0,0,2026-04-25 23:24:39,2026-05-22 15:35:22
+10,hns,,Himanshbhai,Shelat,-,-,Core Member,1,0,0,2026-04-20 10:08:55,2026-06-16 11:54:11
+14,hsp,,Hasmukhbhai,Patel,-,-,Core Member,1,0,0,2026-04-26 00:09:12,
+9,itd,itd@in.smvs.org,Kishanbhai,Patel,+919925242806,-,IT,1,0,0,2026-04-15 09:33:51,2026-05-23 16:11:38
+4,mksabhya,4148.stkabirnrnp@gmail.com,Niravbhai,Basheri,+919925242806,-,Core Member,1,0,0,2026-04-15 09:30:55,2026-06-22 10:32:39
+5,mksant,,P. Dharam Swami,,+919925242806,-,Core Member,1,0,0,2026-04-15 09:31:30,2026-06-16 23:15:59
+6,mukhyasant,,P. Rajipa Swami,,+919925242806,-,Core Member,1,0,0,2026-04-15 09:31:59,2026-06-16 22:51:27
+7,operator,,harshadbhai,Patel,+919925230806,-,Core Member,1,1,0,2026-04-15 09:32:25,2026-06-22 10:12:31
+11,pps,,P. Puranswami,,-,-,Core Member,1,0,0,2026-04-20 10:17:47,2026-05-23 15:50:50

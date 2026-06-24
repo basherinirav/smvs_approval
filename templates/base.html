@@ -1,0 +1,713 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SMVS Approval System{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>    
+    {% block extra_css %}{% endblock %}
+<style>
+/* ===== ROOT VARIABLES ===== */
+:root {
+    --primary-color: #0d3b6e;
+    --secondary-color: #fd7e14;
+    --accent-color: #ffc107;
+    --success-color: #27ae60;
+    --danger-color: #e74c3c;
+    --warning-color: #f39c12;
+    --info-color: #3498db;
+}
+
+/* ===== BASE ===== */
+body {
+    background: #f4f6f9;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    padding-bottom: 60px;
+}
+
+/* ===== NAVBAR ===== */
+.navbar-main {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1a5276 100%);
+    box-shadow: 0 2px 12px rgba(0,0,0,.18);
+    padding: 0 20px;
+    min-height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+.navbar-brand {
+    color: #fff !important;
+    font-weight: 700;
+    font-size: 1.2rem;
+    letter-spacing: .5px;
+}
+
+/* Center / Department badges in navbar */
+.nav-entity-badge {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: .85rem;
+    font-weight: 600;
+    margin-right: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.badge-center { background: var(--accent-color); color: #333; }
+.badge-dept   { background: var(--success-color); color: #fff; }
+
+/* Nav links */
+.navbar-main .nav-link {
+    color: rgba(255,255,255,.88) !important;
+    font-weight: 500;
+    padding: 16px 14px !important;
+    border-bottom: 3px solid transparent;
+    transition: all .2s;
+}
+.navbar-main .nav-link:hover,
+.navbar-main .nav-link.active {
+    color: #fff !important;
+    border-bottom: 3px solid var(--secondary-color);
+}
+.nav-link-report { color: var(--accent-color) !important; }
+.nav-link-report:hover { color: #fff !important; }
+
+/* Dropdown */
+.navbar-main .dropdown-menu {
+    border: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,.15);
+    border-radius: 8px;
+    min-width: 200px;
+}
+.navbar-main .dropdown-item {
+    padding: 10px 18px;
+    font-size: .9rem;
+}
+.navbar-main .dropdown-item:hover {
+    background: #eef4ff;
+    color: var(--primary-color);
+}
+
+/* Hamburger */
+.navbar-toggler {
+    border: 2px solid rgba(255,255,255,.9);
+    padding: 5px 9px;
+}
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255,255,255,0.95)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2.5' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+}
+
+/* ===== FLASH MESSAGES ===== */
+.alert-dismissible { animation: slideIn .3s ease; }
+@keyframes slideIn {
+    from { transform: translateX(120%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* ===== CARDS ===== */
+.card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    transition: all .3s ease;
+}
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    transform: translateY(-2px);
+}
+
+/* ===== FORM HEADER (detail pages) ===== */
+.form-header {
+    background: linear-gradient(135deg, var(--primary-color), #1a5276);
+    color: #fff;
+    padding: 20px 24px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+.form-number { font-size: 1.5rem; font-weight: 700; }
+
+/* ===== STATUS BADGES ===== */
+.badge-status   { padding: 8px 16px; border-radius: 20px; font-weight: 600; }
+.badge-approved { background: #198754; color: #fff; }
+.badge-rejected { background: #dc3545; color: #fff; }
+.badge-revision { background: #fd7e14; color: #fff; }
+.badge-pending  { background: #0d6efd; color: #fff; }
+
+/* ===== TIMELINE ===== */
+.timeline { position: relative; padding: 1rem 0; }
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 20px; top: 0; bottom: 0;
+    width: 2px;
+    background: #e0e0e0;
+}
+.timeline-item {
+    margin-left: 60px;
+    padding-bottom: 2rem;
+    position: relative;
+}
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -50px; top: 0;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--secondary-color);
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px var(--secondary-color);
+}
+
+/* ===== DASHBOARD STATS ===== */
+.dashboard-stat { text-align: center; padding: 2rem 1rem; border-radius: .5rem; }
+.dashboard-stat .number { font-size: 2.5rem; font-weight: 700; color: var(--primary-color); }
+.dashboard-stat .label  { font-size: 1rem; color: #666; margin-top: .5rem; }
+
+/* ===== FOOTER ===== */
+footer {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--primary-color);
+    color: rgba(255,255,255,.7);
+    text-align: center;
+    padding: 8px;
+    font-size: .8rem;
+    z-index: 1000;
+}
+
+/* ===== BUTTONS ===== */
+.btn-primary   { background-color: var(--primary-color); border-color: var(--primary-color); }
+.btn-primary:hover { background-color: #082b52; border-color: #082b52; }
+.btn-success   { background-color: var(--success-color); border-color: var(--success-color); }
+.btn-danger    { background-color: var(--danger-color);  border-color: var(--danger-color);  }
+.form-control:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 .2rem rgba(253,126,20,.25);
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 992px) {
+    .navbar-main .nav-link { padding: 10px 10px !important; font-size: .9rem; }
+}
+@media (max-width: 768px) {
+    .messages-container { max-width: 95vw; right: 10px; }
+    .form-header { padding: 1.5rem 1rem; }
+    .table th, .table td { font-size: .9rem; }
+}
+@media (max-width: 576px) {
+    .nav-tabs { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; padding-bottom: 8px; }
+    .nav-tabs .nav-link { font-size: .85rem; padding: 8px 12px; min-width: 75px; }
+}
+
+/* ===== CUSTOM UI FIXES ===== */
+
+/* Remarks column (dashboard) */
+.remarks-col {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: normal;
+    word-break: break-word;
+    max-width: 260px;
+}
+
+/* Comments text alignment fix */
+.comment-text {
+    text-align: left !important;
+    display: block;
+    width: 100%;
+    white-space: normal;
+    word-break: break-word;
+}
+
+/* Amount badge */
+.amount-badge {
+    background: #e6f4ea;
+    color: #198754;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+/* Approved amount (light background like requested) */
+.approved-amount-light {
+    background: #f1f3f5;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+/* Wrap long remarks in dashboard */
+.wrap-text {
+    white-space: normal !important;
+    word-break: break-word;
+}
+</style>
+</head>
+<body>
+
+{% if request.user.is_authenticated and not request.session.is_locked %}
+<nav class="navbar navbar-expand-lg navbar-main shadow-sm">
+    <div class="container-fluid">
+
+        <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard' %}">
+            <img src="{% static 'img/logod.png' %}" height="40" class="me-2" alt="SMVS Logo">
+            <span class="fw-bold d-none d-sm-inline">SMVS Approval System</span>
+            <span class="fw-bold d-inline d-sm-none">SMVS</span>
+        </a>
+
+        <div class="d-flex align-items-center me-auto ms-lg-3 my-2 my-lg-0">
+            {% if active_workspace_dept %}
+                <span class="nav-entity-badge badge-dept">
+                    <i class="fas fa-sitemap me-1"></i>Dept: {{ active_workspace_dept.name }}
+                </span>
+            {% else %}
+                {% if request.user.user_profile.center %}
+                    <span class="nav-entity-badge badge-center">
+                        <i class="fas fa-building me-1"></i>Center: {{ request.user.user_profile.center.name }}
+                    </span>
+                {% endif %}
+                {% if request.user.user_profile.department %}
+                    <span class="nav-entity-badge badge-dept">
+                        <i class="fas fa-sitemap me-1"></i>Dept: {{ request.user.user_profile.department.name }}
+                    </span>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarMain">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+                        <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'forms_list' %}active{% endif %}" href="{% url 'forms_list' %}">
+                        <i class="fas fa-file-alt me-1"></i>Forms
+                    </a>
+                </li>
+
+                <!-- New Request — end users only --> 
+                {% if nav_user_role and nav_user_role.role == 'end_user' %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'initialize_form' or request.resolver_match.url_name == 'create_approval_form_workspace'%}active{% endif %}" href="{% url 'initialize_form' %}">
+                        <i class="fas fa-plus-circle me-1"></i>New Request
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- Report — controlled by context_processor can_view_report -->
+                {% if can_view_report %}
+                <li class="nav-item">
+                    <a class="nav-link nav-link-report {% if request.resolver_match.url_name == 'approval_report' %}active{% endif %}" href="{% url 'approval_report' %}">
+                        <i class="fas fa-chart-bar me-1"></i>Report
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- Oversight Report — For MK Sant 1, Mk Sant 2, Guruji and Admin -->
+                {% if nav_user_role and nav_user_role.role in 'mk_sant,mk_sabhya,p_rajipaswami,hdh_guruji,admin,prabhari' %}
+                <li class="nav-item">
+                    <a class="nav-link nav-link-report {% if request.resolver_match.url_name == 'prabhari_report_view' %}active{% endif %}" href="{% url 'prabhari_report_view' %}">
+                        <i class="fas fa-eye me-1"></i>Prabhari Report
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if request.user.is_superuser or nav_user_role.role == 'admin' %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="coreMenu" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-microchip me-1"></i> Core
+                    </a>
+                    <ul class="dropdown-menu shadow">
+                        <li><a class="dropdown-item" href="{% url 'core_reference' %}">System Code Map</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'dashboard' %}">Admin Dashboard</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'help_manual' %}active{% endif %}"
+                        href="{% url 'help_manual' %}"> 
+                        <i class="fas fa-question-circle me-2"></i>
+                        <span class="nav-text">Help & Manual</span> 
+                    </a>
+                </li>
+
+                <!-- Admin Panel -->
+                {% if request.user.is_staff or nav_user_role.role == 'admin' %}
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="openAdminGate('/admin/'); return false;"> 
+                        <i class="fas fa-cog me-1"></i>Admin Panel
+                    </a>
+                </li>
+                {% endif %} 
+
+                <!-- Backup — superuser only --> 
+                {% if request.user.is_superuser %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-database me-1"></i>Backup
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'backup_full' %}"><i class="fas fa-hdd me-2 text-primary"></i>Full Backup</a></li>
+                        <li><a class="dropdown-item" href="{% url 'backup_db' %}"><i class="fas fa-database me-2 text-success"></i>Database Only</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger fw-bold" href="{% url 'restore_backup' %}"><i class="fas fa-upload me-2"></i>Restore Backup</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+            </ul>
+
+            <!-- Right side: User dropdown -->  
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle fa-lg"></i>
+                        <span>{{ request.user.get_full_name|default:request.user.username }}</span>
+                        {% if nav_user_role %}
+                          <span class="badge" style="background:var(--secondary-color);font-size:.7rem;">
+                            {{ nav_user_role.get_role_display }}
+                          </span>
+                        {% endif %}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                        <li class="px-3 py-3 border-bottom d-flex align-items-center" style="font-size: 0.9rem; color: #333; text-transform: none;">
+                            <i class="fas fa-user-check me-2 text-success" style="width: 20px; text-align: center;"></i>
+                            <span>Logged in as <strong>{{ request.user.username }}</strong></span>
+                        </li>
+                        <li>
+                            <a class="dropdown-item py-2" href="{% url 'change_password' %}">
+                                <i class="fas fa-key me-2 text-primary"></i>Change Password
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item py-2 text-danger" href="{% url 'logout' %}">
+                                <i class="fas fa-sign-out-alt me-2 text-primary"></i>Logout
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+{% endif %}
+
+<!-- Flash Messages - Centered full-width banner (clean & prominent) -->
+{% if messages %}
+<div class="container-fluid px-3 px-md-4 mt-3">
+  {% for message in messages %}
+  <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% elif message.tags == 'success' %}success{% else %}info{% endif %} alert-dismissible fade show shadow-sm text-center mx-auto" 
+       style="max-width: 960px; border-radius: 8px;" role="alert">
+    {% if message.tags == 'error' %}    <i class="fas fa-times-circle me-2"></i>
+    {% elif message.tags == 'success' %}<i class="fas fa-check-circle me-2"></i>
+    {% elif message.tags == 'warning' %}<i class="fas fa-exclamation-triangle me-2"></i>
+    {% else %}                          <i class="fas fa-info-circle me-2"></i>{% endif %}
+    <strong>{{ message }}</strong>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {% endfor %}
+</div>
+<script>
+  // Auto dismiss after 6 seconds (easy to read)
+  setTimeout(function(){
+    document.querySelectorAll('.alert').forEach(function(el){
+      if (el) bootstrap.Alert.getOrCreateInstance(el).close();
+    });
+  }, 6000);
+</script>
+{% endif %}
+
+<!-- Main Content -->
+<main class="container-fluid py-3 px-3 px-md-4" style="margin-top:10px;">
+  {% block content %}{% endblock %}
+</main>
+
+<footer>&copy; {% now "Y" %} SMVS Approval System. All rights reserved.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+
+<!-- ====== ADMIN PANEL PASSWORD GATE MODAL ====== -->
+<div class="modal fade" id="adminGateModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+        <div class="modal-content" style="border-top: 4px solid #dc3545;">
+            <div class="modal-header border-0 pb-0">
+                <div class="text-center w-100">
+                    <div style="width:60px; height:60px; background:#fff3cd; border-radius:50%;
+                                display:inline-flex; align-items:center; justify-content:center;
+                                border: 2px solid #ffc107;">
+                        <i class="fas fa-shield-alt fa-lg text-warning"></i>
+                    </div>
+
+                    {% if request.user.is_superuser or nav_user_role.role == 'admin' %}
+                        <h5 class="fw-bold mt-2 mb-0">Master Admin Portal Gate</h5>
+                        <p class="text-muted small mt-1">Enter the master admin configuration password</p>
+                            <i class="fas fa-cog me-1"></i>Admin Panel
+                    {% else %}    
+                        <h5 class="fw-bold mt-2 mb-0">Staff Security Verification</h5>
+                        <p class="text-muted small mt-1">Please confirm your personal account password to enter</p> 
+                    {% endif %}
+                </div>
+            </div> 
+
+            <div class="modal-body px-4 pb-2">
+
+                <!-- Attempt counter warning -->
+                <div id="attempt_warning" class="alert alert-warning py-2 text-center small d-none">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    <span id="attempt_text"></span>
+                </div>
+
+                <!-- Lockout message -->
+                <div id="lockout_msg" class="alert alert-danger py-2 text-center d-none">
+                    <i class="fas fa-ban me-1"></i>
+                    <strong>Too many failed attempts.</strong><br>
+                    <span id="lockout_timer_text">Please wait <span id="lockout_seconds">30</span>s before trying again.</span>
+                </div>
+
+                <!-- Error message -->
+                <div id="admin_gate_error" class="alert alert-danger py-2 text-center small d-none">
+                    <i class="fas fa-times-circle me-1"></i>
+                    <span id="admin_gate_error_text"></span>
+                </div>
+
+                <!-- Password Input -->
+                <div class="mb-3" id="password_input_wrap">
+                    <label class="form-label fw-bold small">
+                        <i class="fas fa-lock me-1"></i> Password
+                    </label>
+                    <div class="input-group">
+                        <input type="password"
+                               id="admin_gate_password"
+                               class="form-control"
+                               placeholder="Enter admin panel password"
+                               autocomplete="off">
+                        <button class="btn btn-outline-secondary" type="button" id="toggle_pwd_btn"
+                                onclick="toggleAdminPwd()">
+                            <i class="fas fa-eye" id="admin_eye_icon"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer px-4 pt-0 border-0 flex-column gap-2">
+                <button class="btn btn-danger w-100 fw-bold" id="admin_gate_submit_btn" onclick="submitAdminGate()">
+                    <i class="fas fa-unlock-alt me-2"></i> Verify & Enter
+                </button>
+                <button class="btn btn-outline-secondary w-100" data-bs-dismiss="modal" onclick="resetAdminGate()">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== ADMIN GATE CONFIG =====
+const ADMIN_GATE_MAX_ATTEMPTS = 3;
+const ADMIN_GATE_LOCKOUT_SECONDS = 30;
+
+let adminGateAttempts = 0;
+let adminGateLocked = false;
+let adminGateLockTimer = null;
+let adminGatePendingUrl = null;
+
+// ===== OPEN MODAL (called from navbar link) =====
+function openAdminGate(targetUrl) {
+    adminGatePendingUrl = targetUrl;
+
+    // If locked, show lockout state immediately
+    const modal = new bootstrap.Modal(document.getElementById('adminGateModal'));
+    modal.show();
+
+    if (adminGateLocked) {
+        showLockout();
+    }
+
+    // Focus password field
+    document.getElementById('adminGateModal').addEventListener('shown.bs.modal', function() {
+        if (!adminGateLocked) {
+            document.getElementById('admin_gate_password').focus();
+        }
+    }, { once: true });
+
+    // Allow Enter key to submit
+    document.getElementById('admin_gate_password').onkeydown = function(e) {
+        if (e.key === 'Enter') submitAdminGate();
+    };
+}
+
+// ===== SUBMIT PASSWORD (AJAX to backend) =====
+function submitAdminGate() {
+    if (adminGateLocked) return;
+
+    const password = document.getElementById('admin_gate_password').value.trim();
+    const btn = document.getElementById('admin_gate_submit_btn');
+
+    if (!password) {
+        showAdminGateError('Please enter the password.');
+        return;
+    }
+
+    // Loading state
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Verifying...';
+
+    fetch("{% url 'verify_admin_password' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ password: password })
+    })
+    .then(res => res.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-unlock-alt me-2"></i> Verify & Enter';
+
+        if (data.success) {
+            // ✅ Correct — close modal and navigate
+            resetAdminGate();
+            bootstrap.Modal.getInstance(document.getElementById('adminGateModal')).hide();
+            window.location.href = adminGatePendingUrl;
+        } else {
+            // ❌ Wrong password
+            adminGateAttempts++;
+            document.getElementById('admin_gate_password').value = '';
+            document.getElementById('admin_gate_password').focus();
+
+            const remaining = ADMIN_GATE_MAX_ATTEMPTS - adminGateAttempts;
+
+            if (remaining <= 0) {
+                startLockout();
+            } else {
+                showAdminGateError(`Incorrect password. ${remaining} attempt${remaining > 1 ? 's' : ''} remaining.`);
+                // Shake animation on input
+                const inp = document.getElementById('admin_gate_password');
+                inp.classList.add('border-danger');
+                inp.style.animation = 'shake 0.4s ease';
+                setTimeout(() => { inp.style.animation = ''; }, 400);
+            }
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-unlock-alt me-2"></i> Verify & Enter';
+        showAdminGateError('Network error. Please try again.');
+    });
+}
+
+// ===== LOCKOUT =====
+function startLockout() {
+    adminGateLocked = true;
+    let seconds = ADMIN_GATE_LOCKOUT_SECONDS;
+    showLockout(seconds);
+
+    adminGateLockTimer = setInterval(() => {
+        seconds--;
+        document.getElementById('lockout_seconds').textContent = seconds;
+        if (seconds <= 0) {
+            clearInterval(adminGateLockTimer);
+            adminGateLocked = false;
+            adminGateAttempts = 0;
+            hideLockout();
+        }
+    }, 1000);
+}
+
+function showLockout() {
+    document.getElementById('lockout_msg').classList.remove('d-none');
+    document.getElementById('password_input_wrap').classList.add('d-none');
+    document.getElementById('admin_gate_submit_btn').disabled = true;
+    document.getElementById('admin_gate_error').classList.add('d-none');
+    document.getElementById('attempt_warning').classList.add('d-none');
+    document.getElementById('lockout_seconds').textContent = ADMIN_GATE_LOCKOUT_SECONDS;
+}
+
+function hideLockout() {
+    document.getElementById('lockout_msg').classList.add('d-none');
+    document.getElementById('password_input_wrap').classList.remove('d-none');
+    document.getElementById('admin_gate_submit_btn').disabled = false;
+    document.getElementById('admin_gate_password').focus();
+}
+
+// ===== HELPERS =====
+function showAdminGateError(msg) {
+    const el = document.getElementById('admin_gate_error');
+    document.getElementById('admin_gate_error_text').textContent = msg;
+    el.classList.remove('d-none');
+}
+
+function resetAdminGate() {
+    document.getElementById('admin_gate_password').value = '';
+    document.getElementById('admin_gate_error').classList.add('d-none');
+    document.getElementById('attempt_warning').classList.add('d-none');
+    document.getElementById('admin_gate_password').classList.remove('border-danger');
+}
+
+function toggleAdminPwd() {
+    const inp = document.getElementById('admin_gate_password');
+    const icon = document.getElementById('admin_eye_icon');
+    if (inp.type === 'password') {
+        inp.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+        inp.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+}
+</script>
+
+<script>
+    let idleTimer;
+    const idleTimeout = 15 * 60 * 1000; // 15 minutes in milliseconds
+
+    function resetTimer() {
+        clearTimeout(idleTimer);
+        // Only start timer if user is logged in and NOT already on the lock screen
+        if (!window.location.pathname.includes('/lock/')) {
+            idleTimer = setTimeout(lockScreen, idleTimeout);
+        }
+    }
+
+    function lockScreen() {
+        // Redirect to lock screen and pass the current URL as the 'next' destination
+        const currentPath = window.location.pathname + window.location.search;
+        window.location.href = `/lock/?next=${encodeURIComponent(currentPath)}`;
+    }
+
+    // List of events to listen for
+    window.onload = resetTimer;
+    window.onmousemove = resetTimer;
+    window.onmousedown = resetTimer; 
+    window.ontouchstart = resetTimer; 
+    window.onclick = resetTimer; 
+    window.onkeypress = resetTimer;
+</script>
+
+<!-- Shake animation -->
+<style>
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-8px); }
+    40%       { transform: translateX(8px); }
+    60%       { transform: translateX(-5px); }
+    80%       { transform: translateX(5px); }
+}
+</style>
+</body>
+</html>

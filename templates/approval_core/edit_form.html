@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm mx-auto" style="max-width: 700px;">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Edit Form: {{ form.form_number }}</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Amount ({{ form.currency_symbol }})</label>
+                    <div class="input-group">
+                        <span class="input-group-text">{{ form.currency_symbol }}</span>
+                        <input type="number" name="amount" class="form-control" step="0.01" 
+                                value="{{ form.amount|stringformat:'.2f' }}" required
+                                {% if form.status == 'revision_pending' %}max="{{ form.amount }}"{% endif %}>              
+                    </div>
+                    {% if form.status == 'revision_pending' %}
+                        <small class="text-danger">
+                            <i class="fas fa-info-circle"></i> In Revision mode, you can only decrease or keep the amount same.
+                        </small>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Description</label>
+                    <textarea name="description" class="form-control" rows="6" required>{{ form.description }}</textarea>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'form_detail' form.id %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-success">Update Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

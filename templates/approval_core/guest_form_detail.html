@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Review Form {{ form.form_number }} - SMVS Approval{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">
+                <i class="fas fa-external-link-alt"></i> 
+                Form Review - {{ form.form_number }}               
+            </h4>
+            <span class="badge bg-warning text-black fs-5">Delegated Request</span> 
+        </div>
+        
+        <div class="card-body">
+            <div class="alert alert-info">
+                <strong>You have been delegated this approval request.</strong><br>
+                Please review the details, documents, and take action below.
+            </div>
+            
+            <!-- Form Information -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-light">
+                            <strong>Form Information</strong>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Amount:</strong>
+                                {% if form.currency_code != 'INR' %}
+                                    <strong>{{ form.currency_symbol }}{{ form.amount|floatformat:2 }}</strong>
+                                    <small class="text-muted ms-1">≈ ₹{{ form.amount_inr|floatformat:2 }}
+                                    (1 {{ form.currency_code }} = ₹{{ form.exchange_rate_used }} at submission)</small>
+                                {% else %}
+                                    ₹{{ form.amount|floatformat:2 }}
+                                {% endif %}
+                            </p>
+                            <p><strong>Source:</strong> 
+                                {% if form.center %}
+                                    {{ form.center.name }} (Center Initiated)
+                                {% elif form.department %}
+                                    {{ form.department.name }} (Department)
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </p>
+                            <p><strong>Description:</strong><br>{{ form.description|linebreaks|default:"No description provided" }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-light">
+                            <strong>Timeline Summary</strong>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Submitted:</strong> {{ form.created_at|date:"d-m-Y H:i" }}</p>
+                            <p><strong>Delegated by:</strong> {{ form.delegated_by.get_full_name|default:form.delegated_by.username|default:"Unknown" }}</p>
+                            <p><strong>Remarks from delegator:</strong> {{ form.delegated_by.remarks|default:"No remarks provided" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <strong>Attached Documents ({{ documents|length }})</strong>
+                </div>
+                <div class="card-body">
+                    {% if documents %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Document Type</th>
+                                        <th>Uploaded By</th>
+                                        <th>Date</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for doc in documents %}
+                                        <tr>
+                                            <td>{{ doc.document_type|default:"Document" }}</td>
+                                            <td>{{ doc.uploaded_by.get_full_name|default:doc.uploaded_by.username }}</td>
+                                            <td>{{ doc.uploaded_at|date:"d-m-Y" }}</td>
+                                            <td>
+                                                <a href="{{ doc.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i> View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">No documents attached to this form.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Action Section -->
+            <div class="text-center mt-5 pt-4 border-top">
+                <h5 class="mb-4 text-primary">Your Decision on this Request</h5>
+                
+                <form method="post" action="{% url 'guest_approve_form' form.guest_token %}">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label for="remarks" class="form-label fw-bold">Your Remarks / Comments (Optional)</label>
+                        <textarea name="remarks" id="remarks" class="form-control" rows="4" 
+                                  placeholder="Please provide your comments, observations, or reasons..."></textarea>
+                    </div>
+
+                    <div>
+                        <button type="submit" name="decision" value="approve" 
+                                class="btn btn-success btn-lg px-5 me-3">
+                            <i class="fas fa-check-circle"></i> Approve Form
+                        </button>
+                    
+                        <button type="submit" name="decision" value="reject" 
+                                class="btn btn-danger btn-lg px-5">
+                            <i class="fas fa-times-circle"></i> Reject Form
+                        </button>
+                    </div>
+                </form>
+                
+                <p class="text-muted mt-4 small">
+                    This action is final and will be returned to the original delegator.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

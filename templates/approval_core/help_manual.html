@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}System Manual - SMVS Approval{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="d-flex align-items-center mb-4 pb-2 border-bottom">
+        <div class="bg-primary text-white p-3 rounded me-3 shadow">
+            <i class="fas fa-book-reader fa-2x"></i>
+        </div>
+        <div>
+            <h2 class="mb-0 text-primary fw-bold">SMVS Approval System Manual</h2>
+            <p class="text-muted mb-0">The complete guide for initiating, reviewing, and managing requests.</p>
+        </div>
+    </div>
+
+    {% if nav_user_role.role == 'end_user' %}
+    <div class="row fade-in">
+        <div class="col-lg-12">
+            <div class="card mb-4 shadow-sm border-info">
+                <div class="card-header bg-info text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-user-circle me-2"></i> End User (Submitter) Guide</h5>
+                </div>
+                <div class="card-body">
+                    <p class="lead">The End User is the starting point of the SMVS Approval System workflow. Your primary role is to initiate requests and provide all necessary documentation for verification.</p>
+                    
+                    <h5 class="text-info border-bottom pb-2 mt-4">📂 End User Workspace & Features</h5>
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded h-100 bg-light">
+                                <h6 class="fw-bold"><i class="fas fa-th-large text-info me-2"></i> Dashboard</h6>
+                                <p class="small text-muted mb-0">Displays a high-level summary of "Forms Pending," "Approved," and "Rejected" specifically for your submissions.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded h-100 bg-light">
+                                <h6 class="fw-bold"><i class="fas fa-exclamation-triangle text-warning me-2"></i> Revision Management</h6>
+                                <p class="small text-muted mb-0">A dedicated section highlights forms sent back for revision with high-contrast remarks so you know exactly what to fix.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded h-100 bg-light">
+                                <h6 class="fw-bold"><i class="fas fa-search text-primary me-2"></i> Search & History</h6>
+                                <p class="small text-muted mb-0">Search through past requests using filters to find specific forms, subjects, status or amounts.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="text-info border-bottom pb-2">🕒 Workflow Interaction</h5>
+                    <ul class="list-group list-group-flush mb-3">
+                        <li class="list-group-item">
+                            <strong><i class="fas fa-paper-plane text-info me-2"></i> Submission:</strong> 
+                            If you are in a foreign country, the system automatically detects your local currency and converts it to INR for the audit trail.
+                        </li>
+                        <li class="list-group-item">
+                            <strong><i class="fas fa-file-upload text-danger me-2"></i> Document Upload:</strong> 
+                            Upload evidence as a PDF. You can add documents until the form is officially submitted into the workflow.
+                        </li>
+                        <li class="list-group-item">
+                            <strong><i class="fas fa-route text-success me-2"></i> Real-time Tracking:</strong> 
+                            Use the <strong>Approval Flow</strong> tab to see which office (e.g., "MK Sabhya") currently holds your form.
+                        </li>
+                        <li class="list-group-item">
+                            <strong><i class="fas fa-comments text-primary me-2"></i> Comment Visibility:</strong> 
+                            View feedback only when approvers check the "Show to Lower Levels" option.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if nav_user_role.role != 'end_user' and not request.user.is_superuser %}
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card mb-4 shadow-sm border-success">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-user-check me-2"></i> Approver (Levels 1-6) Guide</h5>
+                </div>
+                <div class="card-body">
+                    <p>Approvers manage the lifecycle of requests through verification and strategic decision-making.</p>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h6><strong>Decision Making</strong></h6>
+                            <p class="small text-muted">Approve, Reject, or request a Revision. Revisions allow the submitter to fix documents without creating a new form.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><strong>Delegation</strong></h6>
+                            <p class="small text-muted">Use 3rd-party delegation to send secure links for external review via email.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if request.user.is_superuser or nav_user_role.role == 'admin' %}
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card mb-4 shadow-sm border-danger">
+                <div class="card-header bg-danger text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-tools me-2"></i> Admin Maintenance & Operations</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold">System Maintenance Commands:</h6>
+                    <div class="bg-dark text-light p-3 rounded mb-3">
+                        <code class="text-success">python manage.py backup_db</code> <span class="text-muted small"># Daily PostgreSQL Backup</span><br>
+                        <code class="text-success">python manage.py backup_project</code> <span class="text-muted small"># Weekly Full Media/Code Backup</span>
+                    </div>
+                    <p class="small">Use <strong>smart_push_update.bat</strong> for selective GitHub updates with precise time-stamping.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="alert alert-secondary mt-4">
+        <i class="fas fa-shield-alt me-2 text-primary"></i> 
+        <strong>Security Policy:</strong> For your protection, the screen auto-locks after 15 minutes of inactivity. Re-enter your password to continue.
+    </div>
+</div>
+{% endblock %}

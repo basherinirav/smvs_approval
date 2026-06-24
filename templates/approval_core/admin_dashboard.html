@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard - SMVS Approval System{% endblock %}
+
+{% block content %}
+<div class="mt-4">
+    <h1 style="color: var(--primary-color);">
+        <i class="fas fa-tachometer-alt"></i> Admin Dashboard
+    </h1>
+
+    <div class="row mt-5">
+        <div class="col-md-3">
+            <div class="card dashboard-stat">
+                <div class="number" style="color: var(--info-color);">{{ total_forms }}</div>
+                <div class="label">Total Forms</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-stat">
+                <div class="number" style="color: var(--warning-color);">{{ pending_approval }}</div>
+                <div class="label">Pending Approval</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-stat">
+                <div class="number" style="color: var(--success-color);">{{ approved_forms }}</div>
+                <div class="label">Approved</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-stat">
+                <div class="number" style="color: var(--danger-color);">{{ rejected_forms }}</div>
+                <div class="label">Rejected</div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="mt-5">
+        <div class="card">
+            <div class="card-header" style="background-color: var(--primary-color); color: white;">
+                <strong>Quick Setup Guide</strong>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li>
+                        <strong>Create Departments</strong>
+                        <p>Go to Manage Departments and add your organization's departments/centers.</p>
+                    </li>
+                    <li>
+                        <strong>Setup Approval Rules</strong>
+                        <p>Create rules based on amounts and departments to define approval workflows.</p>
+                    </li>
+                    <li>
+                        <strong>Configure Email Templates</strong>
+                        <p>Map email addresses for each role in each department for notifications.</p>
+                    </li>
+                    <li>
+                        <strong>Create Users and Assign Roles</strong>
+                        <p>Create user accounts and assign roles (Admin, End User, Operator, Approvers).</p>
+                    </li>
+                    <li>
+                        <strong>Test the System</strong>
+                        <p>Create test applications and run through the approval workflow.</p>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

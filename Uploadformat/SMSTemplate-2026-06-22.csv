@@ -1,0 +1,22 @@
+id,template_name,event_type,approval_level__level_name,message_text,is_active
+17,[WKF-05] Amount Changed Notification to Previous Approvers,amount_changed_notify_approvers,,FM={#var#} SUB={#var#} Notice Form Finalized At Lesser Reduced Amount Row D={#var#} T={#var#}-RJPSWM,1
+20,[DLG-04] 3rd Party Verified (External),approved_by_external,,FM={#var#} SUB={#var#} Form Verified and Approved Via External Guest Link D={#var#} T={#var#}-RJPSWM,1
+19,[DLG-03] 3rd Party Verified (Internal),approved_by_internal,,FM={#var#} SUB={#var#} Form Verified And Approved By Internal 3rd Party D={#var#} T={#var#}-RJPSWM,1
+6,[DLG-01] Internal Delegation to 3rd Party,delegated,,"message = f""FM={approval_form.form_number} SUB={approval_form.subject} - Rs.{approval_form.amount} Delegated to new approver D={today} T={current_time}-RJPSWM""",1
+7,[DLG-07] Delegation Formally Returned,delegation_returned,,"message = f""FM={approval_form.form_number} SUB={approval_form.subject} - Rs.{approval_form.amount} Delegation Returned D={today} T={current_time}-RJPSWM""",1
+18,[DLG-02] External Delegation to Guest Email,external_delegated,MK Sant 2,FM={#var#} SUB={#var#} Forwarded Externally To Guest Expert Via Secure Link D={#var#} T={#var#}-RJPSWM,1
+23,[DLG-08] External Delegation Reply Received,external_delegation_reply,,FM={#var#} SUB={#var#} External Delegation Security Token Reply Received D={#var#} T={#var#}-RJPSWM,1
+4,[WKF-03] Final Approval Completed,final_approved,,"message = f""FM={approval_form.form_number} SUB={approval_form.subject} - Rs.{approval_form.amount} Final Approved D={today} T={current_time}-RJPSWM""",1
+16,[WKF-04] Final Approval with Amount Change,final_approved_amount_changed,,FM={#var#} SUB={#var#} Final Approved With Reduced Amount Check Dashboard D={#var#} T={#var#}-RJPSWM,1
+1,[FRM-01] Form Successfully Submitted,form_submitted,,"message = f""FM={approval_form.form_number} SUB={approval_form.subject} - Rs.{approval_form.amount} Form Submitted D={today} T={current_time}-RJPSWM""",1
+9,[REG-05] Internal New User Registered Awaiting Admin Approval,new_user_registered,,FM=REG-05 SUB={#var#} Internal Corporate User Registered Pending Admin Check D={#var#} T={#var#}-RJPSWM,1
+10,[SYS-01] Password Reset OTP Transmission,otp_sent,,FM=SYS-01 SUB={#var#} Your SMVS Approval System Password Reset OTP Verification Code D={#var#} T={#var#}-RJPSWM,1
+2,[WKF-01] Pending Approval Forwarded to Next Level,pending_approval,,"message = f""FM={approval_form.form_number} SUB={approval_form.subject} - Rs.{approval_form.amount} Pending your approval D={today} T={current_time}-RJPSWM""",1
+13,[REG-02] Center Verified Registration Awaiting Admin Approval,reg_admin_pending,,FM=REG-02 SUB={#var#} Verified By Center Leader Awaiting Admin Activation D={#var#} T={#var#}-RJPSWM,1
+12,[REG-01] External User Pending Center Leader Review,reg_leader_pending,,FM=REG-01 SUB={#var#} External User Registration Pending Center Leader Review D={#var#} T={#var#}-RJPSWM,1
+14,[REG-03] User Account Activated Successfully,reg_user_activated,,FM=REG-03 SUB={#var#} Your Account Has Been Activated Successfully LogIn D={#var#} T={#var#}-RJPSWM,1
+15,[REG-04] User Account Registration Declined,reg_user_declined,,FM=REG-04 SUB={#var#} Your Location Registration Request Was Declined D={#var#} T={#var#}-RJPSWM,1
+5,[WKF-06] Form Permanently Rejected,rejected,,"message = f""FM={approval_form.form_number} SUB={approval_form.subject} - Rs.{approval_form.amount} Rejected D={today} T={current_time}-RJPSWM""",1
+22,[DLG-06] 3rd Party Rejected (External),rejected_by_external,,FM={#var#} SUB={#var#} Discrepancy Flagged And Rejected By External Link D={#var#} T={#var#}-RJPSWM,1
+21,[DLG-05] 3rd Party Rejected (Internal),rejected_by_internal,,FM={#var#} SUB={#var#} Discrepancy Flagged And Rejected By Internal Party D={#var#} T={#var#}-RJPSWM,1
+8,[WKF-02] Revision / Resubmission Requested,revision_requested,,"message = f""FM={approval_form.form_number} SUB={approval_form.subject} - Rs.{approval_form.amount} requested to resubmit form D={today} T={current_time}-RJPSWM""",1

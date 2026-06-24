@@ -1,0 +1,385 @@
+{% extends 'base.html' %}
+
+{% load humanize %}
+
+{% block title %}Dashboard - SMVS Approval System{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ✅ High-Contrast Style for Revision Remarks */
+    .revision-note-box {
+        background-color: #fff3cd; /* Soft yellow background */
+        color: #664d03;           /* Deep high-contrast brown */
+        border: 1px solid #ffecb5;
+        border-left: 4px solid #ffc107; /* Clear visual indicator */
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        display: block;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .revision-note-box i {
+        color: #856404;
+        margin-right: 5px;
+    }
+    
+    /* Ensure the remarks cell has enough space */
+    .remarks-col {
+        vertical-align: middle !important;
+    }
+
+/* ✅ MOBILE VIEW IMPROVEMENTS */
+    @media (max-width: 768px) {
+        /* Force horizontal scroll on small screens instead of crushing columns */
+        .mobile-scroll-table {
+            min-width: 1000px !important; 
+        }
+        .dashboard-stat .number {
+            font-size: 1.5rem !important;
+        }
+        .dashboard-stat .label {
+            font-size: 0.75rem !important;
+        }
+        .mt-5 h3 {
+            font-size: 1.25rem;
+        }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mt-4">
+    <h1 style="color: var(--primary-color);">
+        <i class="fas fa-tachometer-alt"></i> Dashboard
+    </h1>
+
+    {% if user.approval_role.role == "end_user" %}
+        <!-- End User Dashboard -->
+        <div class="row mt-4 g-3">
+            <div class="col-6 col-md-3">
+                <div class="card dashboard-stat text-center shadow-sm">
+                    <div class="number" style="color: var(--info-color);">{{ forms|length }}</div>
+                    <div class="label">Total Forms</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card dashboard-stat text-center shadow-sm">
+                    <div class="number" style="color: var(--warning-color);">{{ pending_count }}</div>
+                    <div class="label">Pending Approval</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card dashboard-stat text-center shadow-sm">
+                    <div class="number" style="color: var(--info-color);">{{ revision_pending }}</div>
+                    <div class="label">Revision Pending</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card dashboard-stat text-center shadow-sm">
+                    <div class="number" style="color: var(--success-color);">{{ approved_count }}</div>
+                    <div class="label">Approved</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-5">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <h3>Your Applications</h3>
+                <a href="{% url 'initialize_form' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> New Request
+                </a>
+            </div>
+
+            {% if forms %}
+                <div class="table-responsive shadow-sm rounded">
+                    <table class="table table-hover table-bordered align-middle mb-0 mobile-scroll-table">
+                        <thead style="background-color: var(--primary-color); color: white;">
+                            <tr class="text-center">
+                                <th class="text-center align-middle">Form No.</th>
+                                <th class="text-center align-middle">Submitted</th> 
+                                <th class="text-center align-middle" style="min-width: 200px;">Subject</th>
+                                <th class="text-center align-middle">Requested Amount</th>
+                                <th class="text-center align-middle">Status</th>
+                                <th class="text-center align-middle">Approved Amount</th>
+                                <th class="text-center align-middle" style="min-width: 250px;">Final Approver Remarks</th> 
+                                <th class="text-center align-middle">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for form in page_obj %}
+                                <tr class="{% if form.status == 'initiated' %}table-warning{% endif %}">                                
+                                    <td class="text-center"><strong>{{ form.form_number }}</strong></td>
+
+                                    <!-- Submitted --> 
+                                    <td class="text-center">{{ form.submitted_at|date:"d-m-Y"|default:"Draft" }}
+                                        <br>
+                                        <span class="text-muted">{{ form.submitted_at|date:"h:i A" }}</span></td>
+                                    <td>{{ form.subject|truncatewords:50 }}</td>
+                                    <td class="text-end pe-3">
+                                        {% if form.currency_code == 'INR' %}
+                                            ₹{{ form.amount|floatformat:2|intcomma }}
+                                        {% else %}   
+                                            {{ form.currency_symbol }}{{ form.amount|floatformat:2 }}
+                                            <br> 
+                                            <small class="text-muted" style="font-size:0.75rem;">≈ ₹{{ form.amount_inr|floatformat:2|intcomma }}                          
+                                            </small> 
+                                        {% endif %}
+                                    </td>
+
+
+                                    <!-- Status -->
+                                    <td class="text-center">
+                                        {% if form.status == 'approved' %}
+                                            <span class="badge badge-approved badge-status">Approved</span>
+
+                                        {% elif form.status == 'rejected' %}
+                                            <span class="badge badge-rejected badge-status">Rejected</span>
+
+                                        {% elif form.status == 'revision_pending' %}
+                                            <span class="badge badge-revision badge-status">Revision Pending</span>
+
+                                        {% elif form.status == 'initiated' %}
+                                            <span class="badge bg-secondary badge-status">Draft</span>
+
+                                        {% elif form.status == 'in_progress' %}
+                                            <span class="badge badge-pending badge-status">In Progress</span> 
+
+                                        {% else %}
+                                            <span class="badge badge-pending badge-status">In Progress</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Approved Amount -->
+                                    <td class="text-end fw-bold pe-3">
+                                        {% if form.status == 'approved' %}
+                                            {% if form.currency_code != 'INR' and form.approved_amount_local %}
+                                                <span class="{% if form.approved_amount_local < form.amount %}text-danger{% elif form.approved_amount_local > form.amount %}text-primary{% else %}text-success{% endif %}">
+                                                    {{ form.currency_symbol }}{{ form.approved_amount_local|floatformat:2|intcomma }}
+                                                </span>
+                                                <small class="text-muted d-block" style="font-size:0.75rem;">
+                                                    ₹{{ form.approved_amount|floatformat:2|intcomma }}
+                                                </small>
+                                            {% else %}
+                                                <span class="{% if form.approved_amount < form.amount %}text-danger{% elif form.approved_amount > form.amount %}text-primary{% else %}text-success{% endif %}">
+                                                    ₹{{ form.approved_amount|default:form.amount|floatformat:2|intcomma }}
+                                                </span>
+                                            {% endif %}
+                                        {% else %}
+                                            {# Show blank — not yet approved #}
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="remarks-col wrap-text text-start">
+                                        {% if form.status == 'approved' %}
+                                            {% with last_action=form.actions.all.first %}
+                                                {% if last_action and last_action.remarks and last_action.remarks != 'Approved' %}
+                                                    {{ last_action.remarks }}
+                                                {% else %}
+                                                    <span class="text-muted">—</span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% elif form.status == 'rejected' %}
+                                            {% with last_action=form.actions.all.first %}
+                                                {% if last_action and last_action.remarks %}
+                                                    <span class="text-danger small">
+                                                        <i class="fas fa-times-circle me-1"></i>{{ last_action.remarks }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted">—</span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% elif form.status == 'revision_pending' %}
+                                            {# Show revision remarks from latest resubmit action #}
+                                            {% with last_action=form.actions.all.first %}
+                                                {% if last_action and last_action.remarks %}
+                                                    <div class="revision-note-box">
+                                                        <i class="fas fa-exclamation-circle"></i>
+                                                        <strong>Required:</strong> {{ last_action.remarks }}
+                                                    </div>
+                                                {% else %}
+                                                    <span class="text-muted">—</span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="text-center">
+                                        <a href="{% url 'form_detail' form.id %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                        <nav aria-label="Page navigation" class="mt-4">
+                                                                    <ul class="pagination justify-content-center">
+                                                                        {% if page_obj.has_previous %}
+                                                                            <li class="page-item"><a class="page-link" href="?page=1">&laquo; First</a></li>
+                                                                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                                                                        {% endif %}
+                                                                            <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                                                                        {% if page_obj.has_next %}
+                                                                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                                                                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a></li>
+                                                                        {% endif %}
+                                                                     </ul>
+                                                                 </nav>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> No applications yet. <a href="{% url 'initialize_form' %}">Create one now</a>
+                </div>
+            {% endif %}
+        </div>
+
+    {% elif user.approval_role.role == "admin" %}
+        <!-- Admin Dashboard -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card dashboard-stat">
+                    <div class="number" style="color: var(--info-color);">{{ total_forms }}</div>
+                    <div class="label">Total Forms</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-stat">
+                    <div class="number" style="color: var(--warning-color);">{{ pending_approval }}</div>
+                    <div class="label">Pending Approval</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-stat">
+                    <div class="number" style="color: var(--success-color);">{{ approved_forms }}</div>
+                    <div class="label">Approved</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-stat">
+                    <div class="number" style="color: var(--danger-color);">{{ rejected_forms }}</div>
+                    <div class="label">Rejected</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-5">
+            <h3>Admin Features</h3>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card p-3">
+                        <h5><i class="fas fa-cog"></i> Configuration</h5>
+                        <p>Manage departments, approval levels, and rules.</p>
+                        <a href="/admin/" class="btn btn-primary btn-sm">Go to Admin</a>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-3">
+                        <h5><i class="fas fa-list"></i> All Forms</h5>
+                        <p>View and manage all approval forms.</p>
+                        <a href="{% url 'forms_list' %}" class="btn btn-primary btn-sm">View All</a>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-3">
+                        <h5><i class="fas fa-envelope"></i> Notifications</h5>
+                        <p>Check notification logs and delivery status.</p>
+                        <a href="/admin/approval_core/notificationlog/" class="btn btn-primary btn-sm">View Logs</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- Approver Dashboard -->
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card dashboard-stat">
+                    <div class="number" style="color: var(--warning-color);">{{ pending_count }}</div>
+                    <div class="label">Pending at Your Level</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card dashboard-stat">
+                    <div class="number" style="color: var(--success-color);">{{ recent_actions|length }}</div>
+                    <div class="label">Recent Actions</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card dashboard-stat">
+                    <div class="number" style="color: var(--info-color);">{{ user.approval_role.get_role_display }}</div>
+                    <div class="label">Your Role</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-5">
+            <div class="col-md-7">
+                <h3>Pending for Your Approval</h3>
+                {% if pending_forms %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead style="background-color: var(--primary-color); color: white;">
+                                <tr>
+                                    <th>Form #</th>
+                                    <th>Subject</th>
+                                    <th>Amount</th>
+                                    <th>Submitted By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for form in pending_forms %}
+                                    <tr>
+                                        <td><strong>{{ form.form_number }}</strong></td>
+                                        <td>{{ form.subject|truncatewords:5 }}</td>
+                                        <td>
+                                            {% if form.currency_code != 'INR' %}
+                                                {{ form.currency_symbol }}{{ form.amount|floatformat:2|intcomma }}
+                                                <small class="text-muted d-block" style="font-size:0.75rem;">≈ ₹{{ form.amount_inr|floatformat:2|intcomma }}</small>
+                                            {% else %}
+                                                ₹{{ form.amount|floatformat:2|intcomma }}
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ form.submitted_by.get_full_name }}</td>
+                                        <td>
+                                            <a href="{% url 'form_detail' form.id %}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i> Review
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No pending forms at your level.
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-5">
+                <h3>Your Recent Actions</h3>
+                {% if recent_actions %}
+                    <div class="timeline">
+                        {% for action in recent_actions %}
+                            <div class="timeline-item">
+                                <strong>{{ action.get_action_type_display }}</strong>
+                                <p class="text-muted mb-0">{{ action.form.form_number }} - {{ action.created_at|date:"d-m-Y H:i" }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No actions yet.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    {% endif %}
+</div>
+{% endblock %}

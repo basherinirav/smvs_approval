@@ -1,0 +1,138 @@
+id,template_name,event_type,message_body,button_text,button_url,is_active
+10,[WKF-05] Amount Changed Notification (To Previous Approvers),amount_changed_notify_approvers,"Jai Swaminarayan. 
+
+Notice: A form previously authorized by you has been Final Approved with a revised budget amount.
+
+Form Number: {form_number}
+Subject: {subject}
+Original Amount: {amount_str}
+Final Approved Amount: {approved_amount_str}
+Final Approver: {approver_name}
+
+Modification Remark: {remarks}",,,1
+12,[DLG-03] 3rd Party Internal Verified WhatsApp Card,approved_by_internal,"Jai Swaminarayan. 
+
+An internal 3rd Party Verifier has reviewed and successfully verified the delegated application form.
+
+Form Number: {form_number}
+Subject: {subject}
+Verifier Name: {approver_name}
+Verifier Comments: {remarks}
+
+The form has been safely returned to your action queue layout list.",,,1
+14,[DLG-07] Delegation Formally Returned,delegation_returned,"Jai Swaminarayan. 
+
+The delegation lifecycle is complete, and the form has been formally returned to the original authorizer.
+
+Form Number: {form_number}
+Subject: {subject}
+Returned By: {approver_name}
+Summary Notes: {remarks}",,,1
+8,[WKF-03] Final Approval Completed,final_approved,"Jay Swaminarayan. 
+
+Your approval form has been FINAL APPROVED!
+
+Form Number: {form_number}
+Subject: {subject}
+Final Amount: {approved_amount_str}
+Segment: {source_name}
+Approved By: {approver_name}
+
+Remarks: {remarks}",,,1
+9,[WKF-04] Final Approval with Amount Change (To Submitter),final_approved_amount_changed,"Jay Swaminarayan. 
+
+Your approval form has been FINAL APPROVED with a modification to the requested payout amount.
+
+Form Number: {form_number}
+Subject: {subject}
+Requested Amount: {amount_str}
+Final Approved Amount: {approved_amount_str}
+Approved By: {approver_name}
+
+Approver Remarks/Reason: {remarks}",,,1
+5,[FRM-01] Form Successfully Submitted,form_submitted,"Dear Submitter,
+
+Your approval request has been successfully submitted.
+
+Form Number: {form_number}
+Subject: {subject}
+Amount: {amount_str}
+Segment: {source_name}
+
+The form is now under review and will be processed according to the approval workflow layout rules.",,,1
+15,[SYS-01] Security OTP Transmission,otp_sent,"Secure Verification Code — SMVS Account Security.
+
+Your secure one-time verification OTP code is requested for your password reset loop path.
+
+Verification Code: {remarks}
+
+This security code is strictly valid for the next 10 minutes only. Please do not share this transaction token string with anyone.",,,1
+6,[WKF-01] Pending Your Approval,pending_approval,"Jai Swaminarayan. 
+
+An application form is currently pending your action review.
+
+Form Number: {form_number}
+Subject: {subject}
+Amount: {amount_str}
+Segment: {source_name}
+
+Kindly log into your management dashboard space to review, append comments, or authorize this request sheet.",,,1
+2,[REG-02] Registration Verified Awaiting Admin,reg_admin_pending,"Jai Swaminarayan. 
+
+An onboarding account has been verified by the local center sant and is now awaiting final Admin activation.
+
+Segment Workspace: {source_name}
+Action Taken By: {approver_name}
+
+Please check your dashboard to perform the final activation step.",,,1
+1,[REG-01] External User Pending Verification,reg_leader_pending,"Jai Swaminarayan. 
+
+A new external user registration request is pending your local validation check.
+
+👤 Username: {remarks}
+Segment Workspace: {source_name}
+Processed By: {approver_name}
+
+This request is currently awaiting your verification. Kindly review and verify this user registration context.",,,1
+3,[REG-03] User Account Activated,reg_user_activated,"Jay Swaminarayan. 
+
+Welcome to the SMVS Approval Portal! Your user account workspace has been successfully activated by the system administrator.
+
+Authorized By: {approver_name}
+Status: Account Active
+
+You are now permitted to log into the application portal using your registered enterprise credentials to create and track your approval applications.",,,1
+4,[REG-04] User Account Declined,reg_user_declined,"Jai Swaminarayan. Your registration request could not be processed at this time.
+📍 Segment: {source_name}
+❌ Reason/Remarks: {remarks}
+For any questions or profile corrections, please contact your local center/department administrator.",,,1
+11,[WKF-06] Form Permanently Rejected,rejected,"Jay Swaminarayan. 
+
+Your approval request form has been permanently rejected.
+
+Form Number: {form_number}
+Subject: {subject}
+Amount: {amount_str}
+
+Reason for Rejection: {remarks}",,,1
+13,[DLG-05] 3rd Party Internal Rejected WhatsApp Card,rejected_by_internal,"Jai Swaminarayan. 
+
+An internal 3rd Party Verifier has flagged and rejected the delegated application form context.
+
+Form Number: {form_number}
+Subject: {subject}
+Verifier Name: {approver_name}
+Verifier Objection/Remarks: {remarks}
+
+The form has been returned to your dashboard queue for immediate attention.",,,1
+7,[WKF-02] Revision/Resubmission Requested,revision_requested,"Jay Swaminarayan. 
+
+Revision has been requested for your Approval form.
+
+Form Number: {form_number}
+Subject: {subject}
+Amount: {amount_str}
+Requested By: {approver_name}
+Reason: {remarks}
+
+Please log into the portal to make necessary changes and resubmit.",,,1

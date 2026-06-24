@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h3><i class="fas fa-map-marked-alt me-2"></i> Core System Reference Map</h3>
+    <p class="text-muted">Quick reference for file structure and logic segments.</p>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">File: form_detail.html</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th width="80">Sec</th>
+                        <th>Component Name</th>
+                        <th width="150">Lines</th>
+                        <th width="100">Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in form_detail_map %}
+                    <tr>
+                        <td>{{ item.sec }}</td>
+                        <td><strong>{{ item.name }}</strong></td>
+                        <td><code class="text-primary">{{ item.lines }}</code></td>
+                        <td><span class="badge bg-secondary">{{ item.type }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
